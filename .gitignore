@@ -1,0 +1,10 @@
+build/
+third_party/limine/
+*.iso
+*.o
+*.d
+*.elf
+*.log
+*.swp
+*~
+.cache/

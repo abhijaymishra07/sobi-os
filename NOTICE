@@ -1,0 +1,25 @@
+SOBI OS is licensed under the MIT License (see LICENSE).
+
+This repository vendors the following third-party file:
+
+include/limine.h
+    Source:  https://github.com/Limine-Bootloader/limine-protocol
+    Commit:  3a0526b700e356f0eac1b71a77697b3fd1c707a3
+    License: 0BSD
+
+    Copyright (C) 2022-2026 Mintsuki and contributors.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+    SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+    OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+    CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+The Limine bootloader binaries (release v12.9.3, BSD-2-Clause) are downloaded
+at build time by scripts/fetch-limine.sh into third_party/limine/ and are not
+part of this repository.

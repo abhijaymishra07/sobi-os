@@ -1,0 +1,47 @@
+# Interrupts and timer strategy
+
+This document records the decision for how SOBI OS brings up interrupt
+handling, which controller it uses, and why the timer arrives in M5 rather
+than M2.
+
+## Entry state (Limine base revision 6, x86-64)
+
+- `IF = 0`. No IDT (IDTR base 0, limit 0). No TSS.
+- Legacy 8259 PICs: all IRQs masked.
+- Every I/O APIC redirection entry with Fixed, Lowest-priority, NMI, or
+  ExtINT delivery mode: masked.
+- Local APIC: enabled and software-enabled (SVR bit 8), spurious vector
+  `0x1FF`, TPR 0, and **every LVT entry masked, including LINT0**. That is the
+  line through which a PIC would deliver IRQ0 to the BSP in ExtINT mode.
+
+Consequence: a PIT-via-PIC timer cannot fire without first unmasking LINT0 or
+programming an I/O APIC entry, both of which are MMIO (`0xFEE00000`,
+`0xFEC00000`). That MMIO is not in the HHDM (see `memory-rules.md`), so it
+needs the VMM's explicit mapping API. The timer therefore depends on M4.
+
+## Decision
+
+| Milestone | Interrupt work |
+|---|---|
+| M2 | Own GDT (kernel code/data, user code/data placeholders, TSS descriptor), TSS with IST1 for `#DF`, IDT with 256 gates, assembly stubs for all 32 exceptions pushing a uniform frame, common C handler with register dump and `cr2` for `#PF`. Remap the 8259 PICs to vectors `0x20-0x2F` so a spurious legacy interrupt can never alias an exception, then mask all 16 lines. `IF` stays 0. |
+| M5 | Map LAPIC MMIO through the VMM. Program the LAPIC timer in periodic mode at about 100 Hz, calibrated once against the PIT (channel 2, port `0x40/0x43`, polled through port `0x61`). Spurious vector `0xFF`. EOI on every interrupt. `sti` for the first time. Tick counter and uptime. Later, I/O APIC via the MADT for the keyboard. |
+
+x2APIC is treated as optional and detected, not assumed. Default QEMU TCG
+CPUs expose an xAPIC; the presence of NX and the APIC base are verified at
+runtime in M4/M5 rather than assumed.
+
+## Exception handling policy
+
+- The default outcome of any exception is fatal: full register dump, then
+  `panic()`. The kernel never resumes at a faulting instruction unless a test
+  explicitly asked for it.
+- Controlled-fault tests (M2) register `expected_fault = {vector, resume_rip}`
+  before executing the faulting instruction. If the common handler sees a
+  matching vector and `RIP`, it clears the record, replaces the saved `RIP`
+  with `resume_rip`, and returns. Any other fault is fatal. This covers
+  `#UD` (`ud2`), `#DE` (divide by zero), `#PF` (unmapped canonical address,
+  checked against `cr2`), and `#GP` (non-canonical access). `int3` is a trap
+  and resumes naturally.
+- `#DF` runs on IST1, prints what it can, and panics. It is tested as an
+  expected panic (QEMU exit 35 with the string `double fault`) in a dedicated
+  ISO, never as something to recover from.
