@@ -54,9 +54,12 @@ all: kernel
 
 kernel: $(KERNEL)
 
-$(KERNEL): $(OBJS) linker.ld Makefile
+$(KERNEL): $(OBJS) linker.ld Makefile scripts/gensyms.sh
 	@mkdir -p $(dir $@)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
+	./scripts/gensyms.sh $@ $(OUT)/ksyms.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $(OUT)/ksyms.c -o $(OUT)/ksyms.o
+	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(OUT)/ksyms.o
 
 $(OUT)/%.o: %.c Makefile
 	@mkdir -p $(dir $@)
@@ -93,7 +96,13 @@ verify-elf: $(KERNEL)
 test:
 	$(MAKE) BUILD=test verify-elf
 	$(MAKE) BUILD=test iso
-	./tests/boot_test.sh
+	@fail=0; \
+	for t in tests/*_test.sh; do \
+		echo "== $$t =="; \
+		./$$t || fail=1; \
+	done; \
+	if [ $$fail -ne 0 ]; then echo "test: FAILED"; exit 1; fi; \
+	echo "test: all suites passed"
 
 clean:
 	rm -rf build

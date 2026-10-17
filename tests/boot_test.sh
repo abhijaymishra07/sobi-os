@@ -11,6 +11,8 @@ run_qemu_test boot "test=boot" "${QEMU_EXIT_PASS}" \
     "hhdm offset: 0xffff8" \
     "memory map (" \
     "boot: ok" \
+    "idt: 256 gates" \
+    "pic remapped" \
     "boot test complete" \
     || failures=$((failures + 1))
 

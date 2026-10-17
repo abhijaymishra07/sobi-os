@@ -148,3 +148,76 @@ Limine's GDT and page tables still in use.
 
 M2: GDT, TSS with IST1, IDT, exception stubs and handlers, controlled-fault
 tests with the fixup mechanism, PIC remap and mask.
+
+## M2: CPU tables and exceptions (2026-10-17)
+
+### Objective
+
+Own GDT and TSS, a 256-vector IDT, exception stubs that preserve a uniform
+register frame, fatal dumps with a symbolised RIP, a fixup path so tests can
+recover from a chosen fault, and the 8259 PIC remapped and masked. `IF` stays
+clear.
+
+### Commands
+
+```
+make BUILD=release
+make test
+```
+
+### Observed results
+
+Release and test builds are warning-free. `make test`:
+
+```
+verify-elf: PASS
+PASS  boot              (qemu exit 33)
+PASS  panic             (qemu exit 35)
+PASS  unknown-selector  (qemu exit 37)
+PASS  exc               (qemu exit 33)
+PASS  df                (qemu exit 35)
+test: all suites passed
+```
+
+Boot log (every scenario):
+
+```
+[info ] cpu: gdt loaded, tss 0x28, ist1 0xffffffff8000c350, ist2 0xffffffff80010350
+[info ] cpu: idt: 256 gates, df on ist1, nmi/mc on ist2
+[info ] cpu: pic remapped to 0x20/0x28, masked 0xff/0xff
+```
+
+`test=exc` reports `int3 ok`, `ksym ok` (lookup of `exc_ud2_insn` is exact),
+`ud2 ok`, `de ok`, `pf ok cr2=0x1000`, `gp ok`.
+
+`test=df` sets RSP to the non-canonical address `0x0000800000000000` and
+executes `ud2`. The `#DF` handler runs on IST1 and panics:
+
+```
+vector 8 (double fault) error 0x0
+rip=0xffffffff80002eb9 <exc_df_trigger+0xa> cs=0x8 rflags=0x86
+rsp=0x0000800000000000 ss=0x10
+reason: double fault
+test: exit 17
+```
+
+The handler's own RSP at the panic (`0xffffffff8000c150`) is inside the IST1
+stack, not the faulting RSP, so the IST switch happened.
+
+### Notes
+
+- GDT order is the SYSRET layout: user data at `0x18`, user code at `0x20`.
+  `syscall`/`sysret` are not enabled yet.
+- `#BP` returns without a fixup because it is a trap; every other vector is
+  fatal unless `fault_expect` matches both the vector and the faulting RIP.
+- Symbol table is produced by a second link (`scripts/gensyms.sh`) so text
+  addresses stay stable. `nm -u` remains empty.
+
+### Remaining limitations
+
+No physical allocator, still on Limine's page tables, interrupts disabled,
+no timer. See `limitations.md`.
+
+### Next
+
+M3: bitmap physical frame allocator.

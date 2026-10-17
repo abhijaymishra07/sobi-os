@@ -4,12 +4,12 @@ What the kernel does not do yet, and sharp edges in what it does.
 
 ## Not implemented
 
-- No IDT. Any CPU exception triple-faults the machine. With `-no-reboot`,
-  QEMU exits with status 0, which the test harness reports as a failure.
-- The kernel still runs on Limine's GDT and page tables. Both live in
+- The kernel still runs on Limine's page tables. They live in
   bootloader-reclaimable memory that the kernel does not yet own or protect.
-- Interrupts are disabled for the entire run; there is no timer, no uptime,
-  and no way to be preempted.
+- Interrupts stay disabled (`IF` is never set). The PIC is remapped and
+  masked, but there is no LAPIC timer and no IRQ handler that unmasks a line.
+- An exception that is not a breakpoint and not an armed fault fixup is fatal.
+  There is no recovery for a double fault beyond the panic on IST1.
 - No memory allocator of any kind. All state is static.
 - No tasks, processes, user mode, system calls, filesystem, or shell.
 - The framebuffer is neither requested nor used; output is serial only.
@@ -24,8 +24,9 @@ What the kernel does not do yet, and sharp edges in what it does.
 - `kvsnprintf` supports `%c %s %d %i %u %x %X %o %p %%` with `l`, `ll`, `z`
   modifiers, width, precision, `-`, `0`, `#`, `+`, space. No floating point,
   no `%n`.
-- `panic()` prints `rsp/rflags/cr2/cr3` only; a full register and stack dump
-  arrives with the exception frames in M2.
+- `panic()` prints `rsp/rflags/cr2/cr3`. Exception paths print the full
+  `int_frame` and a symbolised RIP before panicking. There is still no
+  stack walk.
 - `ASSERT()` is always compiled in, including release builds.
 - `boot_info` keeps pointers into bootloader-reclaimable memory (strings and
   the memory map). That is correct today because nothing reclaims it; M4 must
