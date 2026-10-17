@@ -13,6 +13,7 @@ enter_user:
     movq %rdi, %r12
     movq %rsi, %r13
     movq %rsp, user_return_rsp(%rip)
+    movq %rsp, syscall_stack_top(%rip)
     movq %rsp, %rdi
     call tss_set_rsp0
     pushq $0x1b

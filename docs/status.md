@@ -7,7 +7,7 @@ Each item is exactly one of:
 - **partially implemented**: some of the item works and the gap is named.
 - **planned**: not started; see `roadmap.md`.
 
-Last updated: Milestone 7 (2026-10-17).
+Last updated: Milestone 8 (2026-10-17).
 
 ## Foundation
 
@@ -53,6 +53,7 @@ Last updated: Milestone 7 (2026-10-17).
 | Ring-3 entry and `int 0x80` return | tested | `user: trap ok` |
 | User fault kills the process instead of panicking | tested | `killed pid 2 vec 14` |
 | `copy_from_user` range checks and fault fixup | tested | kernel and unmapped pointers return `-EFAULT` |
+| `syscall` / `sysret` and the core call table | tested | `syscall: wait 42`, bad pointer, bad number, huge size |
 
 ## Planned (initial delivery)
 
@@ -64,7 +65,7 @@ Last updated: Milestone 7 (2026-10-17).
 | LAPIC timer, interrupts enabled, uptime | tested | M5 |
 | Tasks, context switch, round-robin, preemption | tested | M6 |
 | User mode, processes, address-space isolation | tested | M7 |
-| System calls | planned | M8 |
+| System calls | tested | M8 |
 | Initramfs and read-only VFS | planned | M9 |
 | ELF loader, user runtime, user programs | planned | M10 |
 | init process and shell | planned | M11 |

@@ -15,7 +15,7 @@ verified dependencies, not feature names.
 | M5 | Interrupt controller and timer | M4 | done: xAPIC, PIT calibration, 100 Hz (50 ticks / 500 ms), `sti` |
 | M6 | Tasks and scheduling | M5 | done: preemption, sleep order, wake-once, exit reclaims stack and task |
 | M7 | User mode and processes | M6 | done: iretq, int 0x80, isolation, copy_from_user |
-| M8 | System calls | M7 | `syscall`/`sysret`, numbered table, argument validation; exit, getpid, spawn, wait, read, write, sleep |
+| M8 | System calls | M7 | done: syscall/sysret, wait 42, pointer and size checks |
 | M9 | Initramfs and VFS | M8 | ustar module from Limine, read-only VFS, fd table, open/read/close/readdir/stat |
 | M10 | ELF loader and user runtime | M9 | ELF64 validation, segment mapping, user stack and argv, minimal libc, programs from the initramfs; malformed-ELF tests |
 | M11 | init and shell | M10 | init spawns the shell; help/echo/clear/pwd/ls/cat/ps/meminfo/uptime backed by real syscalls |

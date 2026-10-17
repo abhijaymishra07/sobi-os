@@ -60,6 +60,13 @@ static bool map_user_page(struct process *proc, uint64_t virt, uint64_t phys, ui
     return ok;
 }
 
+void proc_switch(struct process *proc)
+{
+    current_proc = proc;
+    if (proc && proc->cr3)
+        vmm_switch(proc->cr3);
+}
+
 void proc_enter(struct process *proc, uint64_t rip, uint64_t user_rsp)
 {
     current_proc = proc;
@@ -74,6 +81,8 @@ bool proc_user_trap(struct int_frame *frame)
         return false;
     if (frame->vector == 0x80) {
         int80_hits++;
+    } else if (frame->vector >= 32) {
+        return false;
     } else {
         pr_info("proc", "killed pid %lu vec %lu", current_proc ? current_proc->pid : 0, frame->vector);
         if (current_proc)

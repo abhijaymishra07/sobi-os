@@ -23,6 +23,7 @@ struct process {
 void proc_init(void);
 struct process *proc_create(struct process *parent);
 void proc_enter(struct process *proc, uint64_t rip, uint64_t user_rsp);
+void proc_switch(struct process *proc);
 struct process *proc_current(void);
 void proc_self_test(void);
 

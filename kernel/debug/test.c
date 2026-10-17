@@ -17,6 +17,7 @@
 #include <sobi/irq.h>
 #include <sobi/sched.h>
 #include <sobi/proc.h>
+#include <sobi/syscall.h>
 #include <limine.h>
 
 extern char exc_ud2_insn[], exc_ud2_resume[];
@@ -562,6 +563,11 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=user")) {
         proc_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=syscall")) {
+        syscall_self_test();
         test_exit(TEST_EXIT_CODE_PASS);
     }
 

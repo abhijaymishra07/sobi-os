@@ -430,3 +430,32 @@ User stack top is the canonical address `0x00007ffffffff000`.
 ### Next
 
 M8: `syscall` / `sysret` and the core call table.
+
+## M8: System calls (2026-10-17)
+
+### Objective
+
+`syscall` / `sysret`, a numbered table, and checked arguments for the core calls.
+
+### Observed results
+
+`test=syscall`:
+
+```
+[info ] syscall: star 0x10000800000000 lstar 0xffffffff8000b0e1
+[info ] test: syscall: wait 42
+[info ] test: syscall: getpid ok
+[info ] test: syscall: bad number
+[info ] test: syscall: bad pointer
+[info ] test: syscall: huge size
+[info ] test: syscall: all checks passed
+```
+
+A ring-3 blob executed `getpid` and `exit(42)` with the `syscall` instruction.
+`wait` returned 42. A kernel pointer was `-EFAULT`, an unknown number was
+`-ENOSYS`, and a length above 4096 was `-EINVAL`. The ABI is in
+`docs/system-calls.md`. `spawn` returns `-ENOENT` until the loader exists.
+
+### Next
+
+M9: ustar initramfs, VFS, tmpfs, and file descriptors.

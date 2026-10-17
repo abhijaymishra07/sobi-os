@@ -12,9 +12,10 @@
 #include <sobi/timer.h>
 #include <sobi/sched.h>
 #include <sobi/proc.h>
+#include <sobi/syscall.h>
 #include <sobi/test.h>
 
-#define SOBI_VERSION "0.7.0"
+#define SOBI_VERSION "0.8.0"
 
 void kmain(void) __noreturn;
 
@@ -44,6 +45,7 @@ void kmain(void)
     timer_init();
     sched_init();
     proc_init();
+    syscall_init();
 
     pr_info("boot", "boot: ok");
 
