@@ -14,7 +14,13 @@
 #define SYS_UPTIME 8
 #define SYS_YIELD  9
 #define SYS_SBRK   10
-#define SYS_MAX    11
+#define SYS_OPEN   11
+#define SYS_CLOSE  12
+#define SYS_LSEEK  13
+#define SYS_MKDIR  14
+#define SYS_UNLINK 15
+#define SYS_STAT   16
+#define SYS_MAX    17
 
 void syscall_init(void);
 int64_t syscall_invoke(uint64_t num, uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5);

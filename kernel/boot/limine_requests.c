@@ -43,6 +43,27 @@ volatile struct limine_executable_address_request limine_exec_addr_req = {
     .response = NULL,
 };
 
+static const char limine_module_path[] = "/boot/initramfs.tar";
+
+static struct limine_internal_module limine_initramfs_module = {
+    .path = limine_module_path,
+    .string = "initramfs",
+    .flags = 0,
+};
+
+static struct limine_internal_module *limine_modules[] = {
+    &limine_initramfs_module,
+};
+
+__used __section(".limine_requests")
+volatile struct limine_module_request limine_module_req = {
+    .id = LIMINE_MODULE_REQUEST_ID,
+    .revision = 1,
+    .response = NULL,
+    .internal_module_count = 1,
+    .internal_modules = limine_modules,
+};
+
 __used __section(".limine_requests")
 volatile struct limine_stack_size_request limine_stack_size_req = {
     .id = LIMINE_STACK_SIZE_REQUEST_ID,

@@ -13,9 +13,10 @@
 #include <sobi/sched.h>
 #include <sobi/proc.h>
 #include <sobi/syscall.h>
+#include <sobi/vfs.h>
 #include <sobi/test.h>
 
-#define SOBI_VERSION "0.8.0"
+#define SOBI_VERSION "0.9.0"
 
 void kmain(void) __noreturn;
 
@@ -46,6 +47,7 @@ void kmain(void)
     sched_init();
     proc_init();
     syscall_init();
+    vfs_init();
 
     pr_info("boot", "boot: ok");
 

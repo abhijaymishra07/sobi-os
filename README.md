@@ -5,7 +5,7 @@ from the ground up in C and assembly. SOBI OS is not derived from Linux, xv6, or
 any other existing kernel. It boots through the Limine bootloader protocol and
 runs under QEMU (BIOS and UEFI).
 
-Current version: 0.8.0 (Milestone 8: system calls).
+Current version: 0.9.0 (Milestone 9: virtual filesystem).
 
 ## Status
 
@@ -32,6 +32,7 @@ for the full list.
 | Preemptive round-robin tasks | tested |
 | User mode and per-process address spaces | tested |
 | System calls (`syscall` / `sysret`) | tested |
+| Initramfs, VFS, and tmpfs | tested |
 | Preemptive scheduler | planned (M6) |
 | User mode, processes, system calls | planned (M7-M8) |
 | Initramfs, VFS, ELF loader, init, shell | planned (M9-M11) |
@@ -163,13 +164,14 @@ The same test ISO also boots under OVMF (UEFI) with exit 33. See
 
 ## Roadmap
 
-See `docs/roadmap.md`. M1 through M8 are done. Next is M9 (initramfs and VFS).
+See `docs/roadmap.md`. M1 through M9 are done. Next is M10 (ELF loader).
 
 ## Known limitations
 
 See `docs/limitations.md`. The kernel owns its GDT, IDT, page tables, frame
 allocator, and heap. It preempts kernel threads, enters ring 3, and
-serves the core system calls. There is no filesystem yet.
+serves the core system calls, and mounts an initramfs plus tmpfs. There
+is no ELF loader yet.
 
 ## License
 

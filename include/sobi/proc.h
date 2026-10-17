@@ -17,6 +17,7 @@ struct process {
     int exit_status;
     bool alive;
     void *fds[16];
+    void *files;
     uint64_t brk;
 };
 

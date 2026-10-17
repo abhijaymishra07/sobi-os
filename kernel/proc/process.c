@@ -10,6 +10,7 @@
 #include <sobi/log.h>
 #include <sobi/panic.h>
 #include <sobi/string.h>
+#include <sobi/vfs.h>
 
 extern void enter_user(uint64_t rip, uint64_t user_rsp);
 extern char user_resume[];
@@ -42,6 +43,7 @@ struct process *proc_create(struct process *parent)
     proc->pid = next_pid++;
     proc->alive = true;
     proc->brk = USER_IMAGE + PAGE_SIZE;
+    proc->files = vfs_table_new();
     proc->parent = parent;
     if (parent) {
         proc->ppid = parent->pid;

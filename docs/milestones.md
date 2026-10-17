@@ -459,3 +459,34 @@ A ring-3 blob executed `getpid` and `exit(42)` with the `syscall` instruction.
 ### Next
 
 M9: ustar initramfs, VFS, tmpfs, and file descriptors.
+
+## M9: Initramfs and VFS (2026-10-17)
+
+### Objective
+
+A ustar reader, a mount of read-only initramfs at `/` and writable tmpfs at
+`/tmp`, and file-descriptor operations including the file system calls.
+
+### Observed results
+
+`test=vfs`:
+
+```
+[info ] test: vfs: lookup ok
+[info ] test: vfs: eof ok
+[info ] test: vfs: double close
+[info ] test: vfs: tmpfs ok
+[info ] test: vfs: fd limit
+[info ] test: vfs: syscall bad pointer
+[info ] test: vfs: all checks passed
+```
+
+Lookup accepts `/hello`, `/./hello`, and `/hello/..`. A missing path is
+`-ENOENT`. Reading at EOF returns 0. Closing an fd twice returns `-EBADF`.
+`/tmp/note` is created, written, read back, and unlinked. Opening past the
+fd table returns `-EMFILE`. `open` of a kernel pointer returns `-EFAULT`.
+Limine is asked for an optional `/boot/initramfs.tar` module.
+
+### Next
+
+M10: ELF64 loader, user libc, and the first user programs.

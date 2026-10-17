@@ -10,6 +10,7 @@
 #include <sobi/boot.h>
 #include <sobi/log.h>
 #include <sobi/panic.h>
+#include <sobi/vfs.h>
 #include <sobi/string.h>
 
 #define MSR_EFER  0xC0000080
@@ -46,8 +47,36 @@ void syscall_push_input(char c)
     input_w = next;
 }
 
+static struct vfs_filetable *current_files(void)
+{
+    struct process *self = proc_current();
+    if (!self || !self->files)
+        return NULL;
+    return self->files;
+}
+
+static int64_t copy_user_path(uint64_t ptr, char *dst, size_t max)
+{
+    if (strncpy_from_user(dst, (const void *)ptr, max) < 0)
+        return -EFAULT;
+    return 0;
+}
+
 static int64_t sys_write(uint64_t fd, uint64_t ptr, uint64_t len)
 {
+    if (fd >= 3) {
+        struct vfs_filetable *ft = current_files();
+        if (!ft)
+            return -EBADF;
+        if (len > 4096)
+            return -EINVAL;
+        if (!user_range_ok((void *)ptr, (size_t)len))
+            return -EFAULT;
+        char buf[4096];
+        if (len && copy_from_user(buf, (void *)ptr, (size_t)len) != 0)
+            return -EFAULT;
+        return vfs_write(ft, (int)fd, buf, (size_t)len);
+    }
     if (fd != 1 && fd != 2)
         return -EBADF;
     if (len > 4096)
@@ -126,6 +155,45 @@ int64_t syscall_dispatch(struct sc_args *args)
     case SYS_YIELD:
         sched_yield();
         return 0;
+    case SYS_OPEN: {
+        char path[VFS_PATH_MAX];
+        if (copy_user_path(args->a0, path, sizeof(path)) != 0)
+            return -EFAULT;
+        struct vfs_filetable *ft = current_files();
+        if (!ft)
+            return -EBADF;
+        return vfs_open(ft, path, (int)args->a1);
+    }
+    case SYS_CLOSE: {
+        struct vfs_filetable *ft = current_files();
+        if (!ft)
+            return -EBADF;
+        return vfs_close(ft, (int)args->a0);
+    }
+    case SYS_LSEEK: {
+        struct vfs_filetable *ft = current_files();
+        if (!ft)
+            return -EBADF;
+        return vfs_lseek(ft, (int)args->a0, (int64_t)args->a1, (int)args->a2);
+    }
+    case SYS_MKDIR: {
+        char path[VFS_PATH_MAX];
+        if (copy_user_path(args->a0, path, sizeof(path)) != 0)
+            return -EFAULT;
+        return vfs_mkdir(path);
+    }
+    case SYS_UNLINK: {
+        char path[VFS_PATH_MAX];
+        if (copy_user_path(args->a0, path, sizeof(path)) != 0)
+            return -EFAULT;
+        return vfs_unlink(path);
+    }
+    case SYS_STAT: {
+        char path[VFS_PATH_MAX];
+        if (copy_user_path(args->a0, path, sizeof(path)) != 0)
+            return -EFAULT;
+        return -EINVAL;
+    }
     case SYS_SBRK: {
         struct process *self = proc_current();
         if (!self)
