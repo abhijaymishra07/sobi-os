@@ -9,9 +9,10 @@
 #include <sobi/pmm.h>
 #include <sobi/vmm.h>
 #include <sobi/kheap.h>
+#include <sobi/timer.h>
 #include <sobi/test.h>
 
-#define SOBI_VERSION "0.4.0"
+#define SOBI_VERSION "0.5.0"
 
 void kmain(void) __noreturn;
 
@@ -38,6 +39,7 @@ void kmain(void)
     pmm_init(boot_info);
     vmm_init();
     kheap_init();
+    timer_init();
 
     pr_info("boot", "boot: ok");
 

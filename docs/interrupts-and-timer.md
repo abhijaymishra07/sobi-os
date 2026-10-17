@@ -19,6 +19,18 @@ programming an I/O APIC entry, both of which are MMIO (`0xFEE00000`,
 `0xFEC00000`). That MMIO is not in the HHDM (see `memory-rules.md`), so it
 needs the VMM's explicit mapping API. The timer therefore depends on M4.
 
+## Implemented in M5
+
+`timer_init()` maps the xAPIC MMIO window (`0xFEE00000` observed), enables
+the spurious vector `0xFF`, masks LINT0/LINT1/error, and calibrates the LAPIC
+timer against PIT channel 2. Five 10 ms one-shot samples are taken with the
+timer divide set to 16; the median becomes the periodic initial count.
+Observed: 625598 counts/tick, and a 500 ms PIT delay counted exactly 50
+ticks. `sti` runs at the end of `timer_init`. IRQ vectors at or above 32 go
+through `irq_dispatch`; the timer vector is `0x30` and writes the LAPIC EOI.
+`uptime_ms()` is `ticks * 10`. `sleep_poll()` halts until enough ticks have
+arrived. The spurious count stayed 0 across the timer test.
+
 ## Implemented in M2
 
 `arch_init()` in `kmain` loads a kernel GDT (null, kernel code `0x08`, kernel

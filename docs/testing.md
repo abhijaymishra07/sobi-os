@@ -6,8 +6,8 @@ runs three layers:
 1. `scripts/verify-elf.sh` on the test kernel: static structural checks.
 2. `scripts/mkiso.sh`: builds the test ISO.
 3. Every `tests/*_test.sh`: boots the kernel in QEMU with a command line and
-   checks the exit status and serial output. Suites as of M4: `boot`, `exc`,
-   `pmm`, `vmm`.
+   checks the exit status and serial output. Suites as of M5: `boot`, `exc`,
+   `pmm`, `vmm`, `timer`.
 
 ## ELF verification
 

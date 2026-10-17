@@ -12,7 +12,7 @@ verified dependencies, not feature names.
 | M2 | CPU tables and exceptions | M1 | GDT/TSS/IDT installed; `int3`, `ud2`, `#DE`, `#PF`, `#GP` handled through fixups; `#DF` panics on IST1; PICs remapped and masked; `IF` still 0 |
 | M3 | Physical memory | M2 | bitmap allocator over the Limine map with the rules in `memory-rules.md`; alloc/free/exhaustion/double-free/reserved tests |
 | M4 | Virtual memory and heap | M3 | done: kernel PML4, W^X, map/unmap/invlpg, heap, 1132 KiB reclaimed |
-| M5 | Interrupt controller and timer | M4 | LAPIC timer at ~100 Hz calibrated by PIT, spurious handler, EOI, `sti`, uptime counter, timer test |
+| M5 | Interrupt controller and timer | M4 | done: xAPIC, PIT calibration, 100 Hz (50 ticks / 500 ms), `sti` |
 | M6 | Tasks and scheduling | M5 | context switch, round-robin ready queue, timer preemption, block/wakeup, idle task, termination and cleanup |
 | M7 | User mode and processes | M6 | ring 3 execution, per-process address spaces, kernel/user stacks, PIDs, parent/child, `copy_from_user`/`copy_to_user`, isolation tests |
 | M8 | System calls | M7 | `syscall`/`sysret`, numbered table, argument validation; exit, getpid, spawn, wait, read, write, sleep |

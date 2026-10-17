@@ -13,6 +13,8 @@
 #include <sobi/vmm.h>
 #include <sobi/kheap.h>
 #include <sobi/cpu.h>
+#include <sobi/timer.h>
+#include <sobi/irq.h>
 #include <limine.h>
 
 extern char exc_ud2_insn[], exc_ud2_resume[];
@@ -384,9 +386,33 @@ static void test_kheap_dbl(void)
     fail("double free returned");
 }
 
+static void test_timer(void)
+{
+    if ((cpu_read_flags() & 0x200) == 0)
+        fail("interrupts are disabled");
+    uint64_t spurious = irq_spurious_count();
+    uint64_t before = timer_ticks();
+    pit_delay_ms(500);
+    uint64_t delta = timer_ticks() - before;
+    pr_info("test", "timer: %lu ticks in 500 ms", delta);
+    if (delta < 40 || delta > 60)
+        fail("tick rate outside 20 percent of 100 Hz");
+    if (irq_spurious_count() != spurious)
+        fail("spurious interrupt during the window");
+    uint64_t u0 = uptime_ms();
+    sleep_poll(100);
+    uint64_t u1 = uptime_ms();
+    if (u1 < u0 + 90 || u1 > u0 + 200)
+        fail("sleep_poll did not track uptime");
+    pr_info("test", "timer: uptime %lu -> %lu spurious %lu", u0, u1, irq_spurious_count());
+    pr_info("test", "timer: all checks passed");
+    test_exit(TEST_EXIT_CODE_PASS);
+}
+
 static void test_df(void)
 {
     pr_info("test", "exc: triggering double fault");
+    cpu_cli();
     call_at(exc_df_trigger);
     fail("double fault returned");
 }
@@ -421,6 +447,9 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=kheap"))
         test_kheap();
+
+    if (cmdline_has(cmdline, "test=timer"))
+        test_timer();
 
     if (cmdline_has(cmdline, "test=boot") || !cmdline || !*cmdline) {
         pr_info("test", "boot test complete");

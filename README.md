@@ -5,7 +5,7 @@ from the ground up in C and assembly. SOBI OS is not derived from Linux, xv6, or
 any other existing kernel. It boots through the Limine bootloader protocol and
 runs under QEMU (BIOS and UEFI).
 
-Current version: 0.4.0 (Milestone 4: virtual memory and kernel heap).
+Current version: 0.5.0 (Milestone 5: LAPIC timer).
 
 ## Status
 
@@ -28,7 +28,7 @@ for the full list.
 | Physical frame allocator | tested |
 | Kernel page tables, W^X, NX, bootloader reclaim | tested |
 | Slab kernel heap | tested |
-| LAPIC timer, interrupts enabled | planned (M5) |
+| LAPIC timer at 100 Hz, interrupts enabled | tested |
 | Preemptive scheduler | planned (M6) |
 | User mode, processes, system calls | planned (M7-M8) |
 | Initramfs, VFS, ELF loader, init, shell | planned (M9-M11) |
@@ -151,7 +151,7 @@ test: exit 17
 verify-elf: PASS
 PASS  boot, panic, unknown-selector, exc, df
 PASS  pmm, pmm-dbl, pmm-range
-PASS  vmm, kheap, kheap-dbl
+PASS  vmm, kheap, kheap-dbl, timer
 test: all suites passed
 ```
 
@@ -160,14 +160,14 @@ The same test ISO also boots under OVMF (UEFI) with exit 33. See
 
 ## Roadmap
 
-See `docs/roadmap.md`. M1 through M4 are done. Next is M5 (LAPIC timer and
-the first `sti`).
+See `docs/roadmap.md`. M1 through M5 are done. Next is M6 (tasks and
+preemptive scheduling).
 
 ## Known limitations
 
 See `docs/limitations.md`. The kernel owns its GDT, IDT, page tables, frame
-allocator, and heap, and it has reclaimed bootloader memory. Interrupts are
-still disabled. There are no tasks and no user mode.
+allocator, and heap, and it runs with the LAPIC timer at 100 Hz. There are
+no tasks and no user mode.
 
 ## License
 

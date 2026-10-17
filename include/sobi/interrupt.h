@@ -29,6 +29,9 @@
 #define VEC_MC  18
 #define VEC_XF  19
 
+#define VEC_TIMER    0x30
+#define VEC_SPURIOUS 0xFF
+
 #define PF_PRESENT  (1u << 0)
 #define PF_WRITE    (1u << 1)
 #define PF_USER     (1u << 2)

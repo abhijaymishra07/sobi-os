@@ -329,3 +329,43 @@ Interrupts still disabled. No timer, tasks, or user mode. Heap is a fixed
 ### Next
 
 M5: LAPIC timer at 100 Hz, IRQ dispatch, first `sti`.
+
+## M5: LAPIC timer (2026-10-17)
+
+### Objective
+
+Map the xAPIC, calibrate its timer against PIT channel 2, run it periodic at
+100 Hz, dispatch IRQs, and enable interrupts for the first time.
+
+### Commands
+
+```
+make BUILD=release
+make test
+```
+
+### Observed results
+
+`test=timer` on QEMU q35, 256 MiB, SeaBIOS:
+
+```
+[info ] apic: xapic at 0xfee00000 id 0 version 0x50014
+[info ] timer: lapic periodic 100 Hz, 625598 counts/tick
+[info ] test: timer: 50 ticks in 500 ms
+[info ] test: timer: uptime 500 -> 600 spurious 0
+[info ] test: timer: all checks passed
+```
+
+50 ticks in a 500 ms PIT window is exactly 100 Hz (the acceptance band was
+40..60). `sleep_poll(100)` moved uptime from 500 ms to 600 ms. The spurious
+vector `0xFF` was not delivered. Divide configuration is 16. `IF` is set
+before the test body runs.
+
+### Remaining limitations
+
+No tasks, so sleep cannot block. PIC stays masked; no I/O APIC yet. See
+`limitations.md`.
+
+### Next
+
+M6: kernel tasks, round-robin, preemption, sleep, and a reaper.

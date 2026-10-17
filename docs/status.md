@@ -7,7 +7,7 @@ Each item is exactly one of:
 - **partially implemented**: some of the item works and the gap is named.
 - **planned**: not started; see `roadmap.md`.
 
-Last updated: Milestone 4 (2026-10-17).
+Last updated: Milestone 5 (2026-10-17).
 
 ## Foundation
 
@@ -42,6 +42,10 @@ Last updated: Milestone 4 (2026-10-17).
 | Slab kernel heap (16..2048) plus big allocations | tested | `kheap`: alignment, reuse, stress, `live 0` |
 | Heap red zone and double-free detection | tested | `kheap-dbl` panics `double free` |
 | Bootloader memory reclaimed after the `cr3` switch | tested | `reclaimed 1132 KiB`; no `BOOTLOADER_RECLAIMABLE` entries remain |
+| xAPIC mapped, spurious vector `0xFF`, LVTs masked | tested | `xapic at 0xfee00000`, spurious count 0 |
+| LAPIC timer 100 Hz calibrated from PIT channel 2 | tested | `50 ticks in 500 ms`, 625598 counts/tick |
+| IRQ dispatch and the first `sti` | tested | `timer` scenario runs with `IF` set |
+| `uptime_ms` and polled `sleep_poll` | tested | uptime moved `500 -> 600` across a 100 ms sleep |
 
 ## Planned (initial delivery)
 
@@ -50,7 +54,7 @@ Last updated: Milestone 4 (2026-10-17).
 | GDT, TSS, IDT, exception handlers, controlled fault tests | tested | M2 |
 | Physical frame allocator with reservation rules | tested | M3 |
 | Kernel page tables, map/unmap, MMIO mapping, kernel heap | tested | M4 |
-| LAPIC timer, interrupts enabled, uptime | planned | M5 |
+| LAPIC timer, interrupts enabled, uptime | tested | M5 |
 | Tasks, context switch, round-robin, preemption | planned | M6 |
 | User mode, processes, address-space isolation | planned | M7 |
 | System calls | planned | M8 |

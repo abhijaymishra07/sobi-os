@@ -1,11 +1,13 @@
-# Known limitations (Milestone 4)
+# Known limitations (Milestone 5)
 
 What the kernel does not do yet, and sharp edges in what it does.
 
 ## Not implemented
 
-- Interrupts stay disabled (`IF` is never set). The PIC is remapped and
-  masked, but there is no LAPIC timer and no IRQ handler that unmasks a line.
+- The LAPIC timer is the only live interrupt. The PIC stays masked, and there
+  is no I/O APIC, so the keyboard and other devices cannot raise IRQs yet.
+  `sleep_poll` busy-halts; it does not block a task, because there are no
+  tasks.
 - An exception that is not a breakpoint and not an armed fault fixup is fatal.
   There is no recovery for a double fault beyond the panic on IST1.
 - No tasks, processes, user mode, system calls, filesystem, or shell.

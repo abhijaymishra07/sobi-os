@@ -1,4 +1,5 @@
 #include <sobi/interrupt.h>
+#include <sobi/irq.h>
 #include <sobi/cpu.h>
 #include <sobi/log.h>
 #include <sobi/panic.h>
@@ -114,6 +115,11 @@ void exception_dispatch(struct int_frame *frame)
         expect.hit = true;
         expect.cr2 = cpu_read_cr2();
         frame->rip = expect.resume_rip;
+        return;
+    }
+
+    if (frame->vector >= 32) {
+        irq_dispatch(frame);
         return;
     }
 
