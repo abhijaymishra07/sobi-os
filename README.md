@@ -5,7 +5,7 @@ from the ground up in C and assembly. SOBI OS is not derived from Linux, xv6, or
 any other existing kernel. It boots through the Limine bootloader protocol and
 runs under QEMU (BIOS and UEFI).
 
-Current version: 0.5.0 (Milestone 5: LAPIC timer).
+Current version: 0.6.0 (Milestone 6: preemptive tasks).
 
 ## Status
 
@@ -29,6 +29,7 @@ for the full list.
 | Kernel page tables, W^X, NX, bootloader reclaim | tested |
 | Slab kernel heap | tested |
 | LAPIC timer at 100 Hz, interrupts enabled | tested |
+| Preemptive round-robin tasks | tested |
 | Preemptive scheduler | planned (M6) |
 | User mode, processes, system calls | planned (M7-M8) |
 | Initramfs, VFS, ELF loader, init, shell | planned (M9-M11) |
@@ -160,14 +161,13 @@ The same test ISO also boots under OVMF (UEFI) with exit 33. See
 
 ## Roadmap
 
-See `docs/roadmap.md`. M1 through M5 are done. Next is M6 (tasks and
-preemptive scheduling).
+See `docs/roadmap.md`. M1 through M6 are done. Next is M7 (user mode).
 
 ## Known limitations
 
 See `docs/limitations.md`. The kernel owns its GDT, IDT, page tables, frame
-allocator, and heap, and it runs with the LAPIC timer at 100 Hz. There are
-no tasks and no user mode.
+allocator, and heap, and it preempts kernel threads from the LAPIC timer.
+There is no user mode yet.
 
 ## License
 

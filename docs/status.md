@@ -7,7 +7,7 @@ Each item is exactly one of:
 - **partially implemented**: some of the item works and the gap is named.
 - **planned**: not started; see `roadmap.md`.
 
-Last updated: Milestone 5 (2026-10-17).
+Last updated: Milestone 6 (2026-10-17).
 
 ## Foundation
 
@@ -46,6 +46,9 @@ Last updated: Milestone 5 (2026-10-17).
 | LAPIC timer 100 Hz calibrated from PIT channel 2 | tested | `50 ticks in 500 ms`, 625598 counts/tick |
 | IRQ dispatch and the first `sti` | tested | `timer` scenario runs with `IF` set |
 | `uptime_ms` and polled `sleep_poll` | tested | uptime moved `500 -> 600` across a 100 ms sleep |
+| Kernel tasks, round-robin, idle, exit reaper | tested | `sched` scenario, resources restored |
+| Timer preemption without an explicit yield | tested | `sched: preempt ok switches 14` |
+| `sched_block` / `sched_wakeup` and sleep wheel | tested | wake-once and sleep order `20,40,80` |
 
 ## Planned (initial delivery)
 
@@ -55,7 +58,7 @@ Last updated: Milestone 5 (2026-10-17).
 | Physical frame allocator with reservation rules | tested | M3 |
 | Kernel page tables, map/unmap, MMIO mapping, kernel heap | tested | M4 |
 | LAPIC timer, interrupts enabled, uptime | tested | M5 |
-| Tasks, context switch, round-robin, preemption | planned | M6 |
+| Tasks, context switch, round-robin, preemption | tested | M6 |
 | User mode, processes, address-space isolation | planned | M7 |
 | System calls | planned | M8 |
 | Initramfs and read-only VFS | planned | M9 |

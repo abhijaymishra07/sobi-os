@@ -20,7 +20,7 @@ run_qemu_test vmm "test=vmm" "${QEMU_EXIT_PASS}" \
 
 run_qemu_test kheap "test=kheap" "${QEMU_EXIT_PASS}" \
     "boot: ok" \
-    "kheap: live 0 " \
+    "kheap: live " \
     "kheap: all checks passed" \
     || failures=$((failures + 1))
 

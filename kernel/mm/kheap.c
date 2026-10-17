@@ -1,4 +1,5 @@
 #include <sobi/kheap.h>
+#include <sobi/sched.h>
 #include <sobi/vmm.h>
 #include <sobi/pmm.h>
 #include <sobi/string.h>
@@ -156,9 +157,13 @@ void *kmalloc(size_t size)
 {
     if (size == 0)
         return NULL;
+    preempt_disable();
     int cls = class_for(size);
-    if (cls < 0)
-        return alloc_big(size);
+    if (cls < 0) {
+        void *big = alloc_big(size);
+        preempt_enable();
+        return big;
+    }
 
     struct slab *s = NULL;
     for (struct slab *it = slabs[cls]; it; it = it->next) {
@@ -169,8 +174,10 @@ void *kmalloc(size_t size)
     }
     if (!s)
         s = new_slab(cls);
-    if (!s)
+    if (!s) {
+        preempt_enable();
         return NULL;
+    }
 
     for (uint32_t i = 0; i < s->capacity; i++) {
         if (bit_on(s, i))
@@ -183,8 +190,10 @@ void *kmalloc(size_t size)
             p[size] = REDZONE;
         stats.live_bytes += size;
         stats.allocs++;
+        preempt_enable();
         return p;
     }
+    preempt_enable();
     return NULL;
 }
 
@@ -212,9 +221,11 @@ void kfree(void *ptr)
 {
     if (!ptr)
         return;
+    preempt_disable();
     for (size_t i = 0; i < ARRAY_SIZE(bigs); i++) {
         if (bigs[i].used && bigs[i].ptr == ptr) {
             free_big(&bigs[i]);
+            preempt_enable();
             return;
         }
     }
@@ -234,6 +245,7 @@ void kfree(void *ptr)
     bit_clr(s, index);
     s->in_use--;
     s->req[index] = 0;
+    preempt_enable();
 }
 
 void *krealloc(void *ptr, size_t size)

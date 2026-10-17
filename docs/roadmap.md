@@ -13,7 +13,7 @@ verified dependencies, not feature names.
 | M3 | Physical memory | M2 | bitmap allocator over the Limine map with the rules in `memory-rules.md`; alloc/free/exhaustion/double-free/reserved tests |
 | M4 | Virtual memory and heap | M3 | done: kernel PML4, W^X, map/unmap/invlpg, heap, 1132 KiB reclaimed |
 | M5 | Interrupt controller and timer | M4 | done: xAPIC, PIT calibration, 100 Hz (50 ticks / 500 ms), `sti` |
-| M6 | Tasks and scheduling | M5 | context switch, round-robin ready queue, timer preemption, block/wakeup, idle task, termination and cleanup |
+| M6 | Tasks and scheduling | M5 | done: preemption, sleep order, wake-once, exit reclaims stack and task |
 | M7 | User mode and processes | M6 | ring 3 execution, per-process address spaces, kernel/user stacks, PIDs, parent/child, `copy_from_user`/`copy_to_user`, isolation tests |
 | M8 | System calls | M7 | `syscall`/`sysret`, numbered table, argument validation; exit, getpid, spawn, wait, read, write, sleep |
 | M9 | Initramfs and VFS | M8 | ustar module from Limine, read-only VFS, fd table, open/read/close/readdir/stat |

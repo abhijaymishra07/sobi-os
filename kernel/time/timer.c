@@ -5,6 +5,7 @@
 #include <sobi/log.h>
 #include <sobi/panic.h>
 #include <sobi/interrupt.h>
+#include <sobi/sched.h>
 
 static volatile uint64_t ticks;
 
@@ -13,6 +14,7 @@ static void timer_irq(struct int_frame *frame)
     (void)frame;
     ticks++;
     apic_eoi();
+    sched_on_tick();
 }
 
 void timer_init(void)

@@ -369,3 +369,33 @@ No tasks, so sleep cannot block. PIC stays masked; no I/O APIC yet. See
 ### Next
 
 M6: kernel tasks, round-robin, preemption, sleep, and a reaper.
+
+## M6: Tasks and scheduling (2026-10-17)
+
+### Objective
+
+Kernel threads on 16 KiB stacks with guard pages, a round-robin queue, timer
+preemption, blocking, a 16-slot sleep wheel, an idle task, and deferred
+reclamation of exited stacks.
+
+### Observed results
+
+`test=sched` (QEMU q35, 256 MiB):
+
+```
+[info ] sched: online, boot task 2, idle 1
+[info ] test: sched: preempt ok switches 14
+[info ] test: sched: sleep order 20,40,80
+[info ] test: sched: wake once
+[info ] test: sched: resources restored
+[info ] test: sched: all checks passed
+```
+
+Two threads each observed the other while both were still inside their loops,
+with no yield in those loops. Sleep of 20, 40, and 80 ms completed in that
+order. A blocked thread ran once per wakeup. After exit, free frames and
+heap live bytes matched the pre-create snapshot.
+
+### Next
+
+M7: ring 3, per-process address spaces, user copies.

@@ -1,13 +1,14 @@
-# Known limitations (Milestone 5)
+# Known limitations (Milestone 6)
 
 What the kernel does not do yet, and sharp edges in what it does.
 
 ## Not implemented
 
 - The LAPIC timer is the only live interrupt. The PIC stays masked, and there
-  is no I/O APIC, so the keyboard and other devices cannot raise IRQs yet.
-  `sleep_poll` busy-halts; it does not block a task, because there are no
-  tasks.
+  is no I/O APIC. `sched_sleep_ms` blocks the current task. `sleep_poll` is
+  still a halt loop for code that must not sleep.
+- One run queue, one CPU. No user mode yet. Empty heap slabs are kept, so a
+  brand-new size class retains its backing page after the last free.
 - An exception that is not a breakpoint and not an armed fault fixup is fatal.
   There is no recovery for a double fault beyond the panic on IST1.
 - No tasks, processes, user mode, system calls, filesystem, or shell.

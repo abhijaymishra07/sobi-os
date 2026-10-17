@@ -15,6 +15,7 @@
 #include <sobi/cpu.h>
 #include <sobi/timer.h>
 #include <sobi/irq.h>
+#include <sobi/sched.h>
 #include <limine.h>
 
 extern char exc_ud2_insn[], exc_ud2_resume[];
@@ -386,6 +387,110 @@ static void test_kheap_dbl(void)
     fail("double free returned");
 }
 
+static volatile int spin_stage[2];
+static volatile int spin_saw[2];
+static volatile int sleep_order[4];
+static volatile int sleep_n;
+static volatile int wake_hits;
+static struct task *wake_task;
+static volatile int exit_done;
+
+static void spinner(void *arg)
+{
+    int id = (int)(uint64_t)arg;
+    spin_stage[id] = 1;
+    uint64_t end = timer_ticks() + 30;
+    while (timer_ticks() < end) {
+        if (spin_stage[id ^ 1] == 1)
+            spin_saw[id] = 1;
+    }
+    spin_stage[id] = 2;
+}
+
+static void sleeper(void *arg)
+{
+    uint64_t ms = (uint64_t)arg;
+    sched_sleep_ms(ms);
+    if (sleep_n < 4)
+        sleep_order[sleep_n++] = (int)ms;
+}
+
+static void blocker(void *arg)
+{
+    (void)arg;
+    sched_block();
+    wake_hits++;
+    sched_block();
+    wake_hits++;
+}
+
+static void leaver(void *arg)
+{
+    (void)arg;
+    exit_done = 1;
+    task_exit(0);
+}
+
+static void test_sched(void)
+{
+    uint64_t start = timer_ticks();
+    task_create(spinner, (void *)(uint64_t)0, "spin0");
+    task_create(spinner, (void *)(uint64_t)1, "spin1");
+    while ((spin_stage[0] != 2 || spin_stage[1] != 2) && timer_ticks() < start + 200)
+        sched_yield();
+    if (spin_stage[0] != 2 || spin_stage[1] != 2 || !spin_saw[0] || !spin_saw[1])
+        fail("preemption was not observed");
+    pr_info("test", "sched: preempt ok switches %lu", sched_switch_count());
+
+    task_create(sleeper, (void *)(uint64_t)80, "sl80");
+    task_create(sleeper, (void *)(uint64_t)20, "sl20");
+    task_create(sleeper, (void *)(uint64_t)40, "sl40");
+    start = timer_ticks();
+    while (sleep_n < 3 && timer_ticks() < start + 200)
+        sched_yield();
+    if (sleep_n != 3 || sleep_order[0] != 20 || sleep_order[1] != 40 || sleep_order[2] != 80)
+        fail("sleep order wrong");
+    pr_info("test", "sched: sleep order %d,%d,%d", sleep_order[0], sleep_order[1], sleep_order[2]);
+
+    wake_hits = 0;
+    wake_task = task_create(blocker, NULL, "block");
+    start = timer_ticks();
+    while (sched_task_state(wake_task) != TASK_BLOCKED && timer_ticks() < start + 100)
+        sched_yield();
+    if (sched_task_state(wake_task) != TASK_BLOCKED)
+        fail("task did not block");
+    sched_wakeup(wake_task);
+    while (wake_hits < 1 && timer_ticks() < start + 100)
+        sched_yield();
+    if (wake_hits != 1 || sched_task_state(wake_task) != TASK_BLOCKED)
+        fail("wakeup was not exactly once");
+    pr_info("test", "sched: wake once");
+    sched_wakeup(wake_task);
+    while (wake_hits < 2 && timer_ticks() < start + 200)
+        sched_yield();
+    if (wake_hits != 2)
+        fail("second wakeup did not run");
+
+    struct pmm_stats ps = pmm_stats();
+    struct kheap_stats hs = kheap_stats();
+    exit_done = 0;
+    task_create(leaver, NULL, "exit");
+    start = timer_ticks();
+    while (!exit_done && timer_ticks() < start + 100)
+        sched_yield();
+    sched_yield();
+    if (!exit_done)
+        fail("task did not exit");
+    if (pmm_stats().free != ps.free || kheap_stats().live_bytes != hs.live_bytes) {
+        pr_err("test", "exit leaked pmm %lu -> %lu live %lu -> %lu",
+               ps.free, pmm_stats().free, hs.live_bytes, kheap_stats().live_bytes);
+        fail("exit leaked");
+    }
+    pr_info("test", "sched: resources restored");
+    pr_info("test", "sched: all checks passed");
+    test_exit(TEST_EXIT_CODE_PASS);
+}
+
 static void test_timer(void)
 {
     if ((cpu_read_flags() & 0x200) == 0)
@@ -450,6 +555,9 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=timer"))
         test_timer();
+
+    if (cmdline_has(cmdline, "test=sched"))
+        test_sched();
 
     if (cmdline_has(cmdline, "test=boot") || !cmdline || !*cmdline) {
         pr_info("test", "boot test complete");
