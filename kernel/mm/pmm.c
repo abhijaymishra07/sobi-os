@@ -224,6 +224,47 @@ bool pmm_is_free(uint64_t phys)
     return !bit_used(phys >> PAGE_SHIFT);
 }
 
+uint64_t pmm_reclaim_bootloader(void)
+{
+    uint64_t cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
+    cr3 &= ~0xfffULL;
+    if (pmm_type_at(cr3) == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE)
+        panic("pmm: cr3 %#lx is still in bootloader memory", cr3);
+
+    uint64_t pages = 0;
+    for (uint64_t i = 0; i < nregions; i++) {
+        if (regions[i].type != LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE)
+            continue;
+        uint64_t start = ALIGN_UP(regions[i].base, PAGE_SIZE);
+        uint64_t end = ALIGN_DOWN(regions[i].base + regions[i].length, PAGE_SIZE);
+        for (uint64_t addr = start; addr < end; addr += PAGE_SIZE) {
+            uint64_t page = addr >> PAGE_SHIFT;
+            if (page == 0 || page >= npages)
+                continue;
+            if (addr == cr3)
+                panic("pmm: refusing to reclaim cr3");
+            if (bit_used(page)) {
+                bit_mark_free(page);
+                free_count++;
+                if (page < scan)
+                    scan = page;
+                pages++;
+            }
+        }
+        regions[i].type = LIMINE_MEMMAP_USABLE;
+    }
+
+    const struct limine_memmap_response *map = boot_info->memmap;
+    for (uint64_t i = 0; i < map->entry_count; i++) {
+        if (map->entries[i]->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE)
+            map->entries[i]->type = LIMINE_MEMMAP_USABLE;
+    }
+
+    pr_info("pmm", "reclaimed %lu KiB of bootloader memory", pages * 4);
+    return pages;
+}
+
 struct pmm_stats pmm_stats(void)
 {
     struct pmm_stats s;

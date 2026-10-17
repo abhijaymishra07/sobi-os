@@ -7,7 +7,7 @@ Each item is exactly one of:
 - **partially implemented**: some of the item works and the gap is named.
 - **planned**: not started; see `roadmap.md`.
 
-Last updated: Milestone 3 (2026-10-17).
+Last updated: Milestone 4 (2026-10-17).
 
 ## Foundation
 
@@ -35,6 +35,13 @@ Last updated: Milestone 3 (2026-10-17).
 | Physical frame allocator (bitmap, page 0 excluded, bootloader memory held) | tested | `pmm` scenario: round trip, contig, exhaustion of 65104 pages, reserved page held |
 | Memmap and bootloader strings copied into kernel memory | tested | `pmm` init copies 18 regions before allocation |
 | Double-free and out-of-range detection | tested | `pmm-dbl` and `pmm-range` panic |
+| Kernel page tables, W^X, NX, global pages, `cr3` switch | tested | `vmm` scenario: `cr3 0x76000 nx on` |
+| `vmm_map` / `unmap` / `protect` / `translate`, `invlpg` | tested | execute, NX `#PF`, read-only store, unmap then load |
+| HHDM reproduced for the same region types Limine maps | implemented | boot continues after the `cr3` switch; HHDM alias used by the vmm test |
+| MMIO window and kernel-stack allocator with guard pages | tested | `vmm_alloc_stack` guard faults; boot stacks' guard page faults |
+| Slab kernel heap (16..2048) plus big allocations | tested | `kheap`: alignment, reuse, stress, `live 0` |
+| Heap red zone and double-free detection | tested | `kheap-dbl` panics `double free` |
+| Bootloader memory reclaimed after the `cr3` switch | tested | `reclaimed 1132 KiB`; no `BOOTLOADER_RECLAIMABLE` entries remain |
 
 ## Planned (initial delivery)
 
@@ -42,7 +49,7 @@ Last updated: Milestone 3 (2026-10-17).
 |---|---|---|
 | GDT, TSS, IDT, exception handlers, controlled fault tests | tested | M2 |
 | Physical frame allocator with reservation rules | tested | M3 |
-| Kernel page tables, map/unmap, MMIO mapping, kernel heap | planned | M4 |
+| Kernel page tables, map/unmap, MMIO mapping, kernel heap | tested | M4 |
 | LAPIC timer, interrupts enabled, uptime | planned | M5 |
 | Tasks, context switch, round-robin, preemption | planned | M6 |
 | User mode, processes, address-space isolation | planned | M7 |

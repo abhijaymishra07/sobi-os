@@ -54,6 +54,37 @@ exc_int3_insn:
     ret
 .size exc_int3_insn, . - exc_int3_insn
 
+.global exc_store
+.global exc_store_insn
+.global exc_store_resume
+.type exc_store, @function
+exc_store:
+exc_store_insn:
+    movq %rsi, (%rdi)
+exc_store_resume:
+    ret
+.size exc_store, . - exc_store
+
+.global exc_load_rax
+.global exc_load_rax_insn
+.global exc_load_rax_resume
+.type exc_load_rax, @function
+exc_load_rax:
+exc_load_rax_insn:
+    movq (%rdi), %rax
+exc_load_rax_resume:
+    ret
+.size exc_load_rax, . - exc_load_rax
+
+.global exc_call_rax
+.global exc_call_rax_resume
+.type exc_call_rax, @function
+exc_call_rax:
+    call *%rdi
+exc_call_rax_resume:
+    ret
+.size exc_call_rax, . - exc_call_rax
+
 .global exc_df_trigger
 .type exc_df_trigger, @function
 exc_df_trigger:

@@ -67,6 +67,22 @@ SECTIONS
     {
         *(COMMON)
         *(.bss .bss.*)
+        . = ALIGN(0x1000);
+        __stack_guard_boot = .;
+        . += 0x1000;
+        boot_stack_bottom = .;
+        . += 0x4000;
+        boot_stack_top = .;
+        __stack_guard_ist1 = .;
+        . += 0x1000;
+        ist1_stack_bottom = .;
+        . += 0x4000;
+        ist1_stack_top = .;
+        __stack_guard_ist2 = .;
+        . += 0x1000;
+        ist2_stack_bottom = .;
+        . += 0x4000;
+        ist2_stack_top = .;
     } :data
 
     . = ALIGN(16);

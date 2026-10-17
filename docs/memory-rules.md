@@ -1,13 +1,16 @@
 # Memory reservation and reclamation rules
 
-`kernel/mm/pmm.c` enforces these rules as of Milestone 3. `pmm_free` refuses
-addresses that are not inside a `USABLE` region, that cover the bitmap, or
-that are already free (double free panics outside release builds). Physical
-page 0 is never free. `BOOTLOADER_RECLAIMABLE` stays allocated until
-`pmm_reclaim_bootloader()` exists in M4. The bitmap is 8 KiB at the lowest
-usable region (observed `0x74000` under QEMU). The memory map and bootloader
-strings are copied into kernel `.bss` by `boot_own_firmware_data()` before the
-allocator runs.
+`kernel/mm/pmm.c` enforces these rules. `pmm_free` refuses addresses that are
+not inside a `USABLE` region, that cover the bitmap, or that are already free
+(double free panics outside release builds). Physical page 0 is never free.
+`BOOTLOADER_RECLAIMABLE` is freed by `pmm_reclaim_bootloader()` at the end of
+`vmm_init`, after the kernel's own `cr3` is loaded. Observed under QEMU q35
+with 256 MiB: 1132 KiB reclaimed, kernel `cr3` at `0x76000` (usable). The
+bitmap is 8 KiB at the lowest usable region (observed `0x74000`). The memory
+map and bootloader strings are copied into kernel `.bss` by
+`boot_own_firmware_data()` before the allocator runs. Reclamation rewrites
+both the kernel's region table and the owned Limine entries to `USABLE`, so
+later `pmm_type_at` checks agree with the free set.
 
 These rules are fixed before the physical allocator (M3) exists so that the
 allocator implements them rather than discovering them. They follow from the

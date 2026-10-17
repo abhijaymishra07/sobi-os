@@ -51,14 +51,12 @@ struct __packed tss {
     uint16_t iopb;
 };
 
-#define IST_STACK_SIZE 16384
-
 extern char boot_stack_top[];
+extern char ist1_stack_top[];
+extern char ist2_stack_top[];
 
 static struct gdt_table gdt __aligned(16);
 static struct tss tss __aligned(16);
-static uint8_t ist1_stack[IST_STACK_SIZE] __aligned(16);
-static uint8_t ist2_stack[IST_STACK_SIZE] __aligned(16);
 
 static struct gdt_entry make_seg(uint8_t access, uint8_t flags)
 {
@@ -98,8 +96,8 @@ void gdt_init(void)
 
     tss.iopb = sizeof(tss);
     tss.rsp0 = (uint64_t)boot_stack_top;
-    tss.ist1 = (uint64_t)ist1_stack + IST_STACK_SIZE;
-    tss.ist2 = (uint64_t)ist2_stack + IST_STACK_SIZE;
+    tss.ist1 = (uint64_t)ist1_stack_top;
+    tss.ist2 = (uint64_t)ist2_stack_top;
     fill_tss_entry(&gdt.tss, (uint64_t)&tss, sizeof(tss) - 1);
 
     struct gdtr gdtr = {

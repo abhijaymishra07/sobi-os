@@ -270,3 +270,62 @@ freed. See `limitations.md`.
 ### Next
 
 M4: kernel page tables, map/unmap, MMIO window, slab heap, reclaim bootloader memory.
+
+## M4: Virtual memory and kernel heap (2026-10-17)
+
+### Objective
+
+Replace Limine's page tables with kernel-owned ones (W^X, NX, global kernel
+pages, HHDM over the same region types, unmapped stack guards), reclaim
+bootloader memory, and provide a slab heap with red zones.
+
+### Commands
+
+```
+make test
+```
+
+### Observed results
+
+```
+verify-elf: PASS
+PASS  vmm        (qemu exit 33)
+PASS  kheap      (qemu exit 33)
+PASS  kheap-dbl  (qemu exit 35, panic "double free")
+test: all suites passed
+```
+
+Serial (QEMU q35, 256 MiB, SeaBIOS, `test=vmm`):
+
+```
+[info ] pmm: 260332 KiB free across 65503 pages, bitmap 8 KiB at 0x74000 (18 regions copied)
+[info ] pmm: reclaimed 1132 KiB of bootloader memory
+[info ] vmm: cr3 0x76000 nx on, reclaimed 1132 KiB, guards unmapped
+[info ] kheap: heap at 0xffffff8000000000, 8 slab classes
+[info ] test: vmm: reclaimed page 0x1000 is free
+[info ] test: vmm: map 0xfffffff800000000 -> 0x1000
+[info ] test: vmm: execute ok
+[info ] test: vmm: nx fault cr2=0xfffffff800000000
+[info ] test: vmm: ro fault ok
+[info ] test: vmm: unmap tlb ok
+[info ] test: vmm: stack guard 0xffffffff80016000
+[info ] test: vmm: alloc stack 0xfffffe8000005000
+[info ] test: vmm: all checks passed
+```
+
+`test=kheap` ends at `live 0 allocs 263 frees 263 slabs 110`. The executable
+test writes `0xC3` through the HHDM alias, maps the frame read+execute, calls
+it, then `vmm_protect` adds NX and the faulting RIP is the target. A
+read-only store faults and the HHDM alias byte stays `0x11`.
+
+Kernel image grew to 148 KiB. Stacks and their guard pages live in the data
+segment (`boot_stack_top` at `0xffffffff8001b000`).
+
+### Remaining limitations
+
+Interrupts still disabled. No timer, tasks, or user mode. Heap is a fixed
+64 MiB window. See `limitations.md`.
+
+### Next
+
+M5: LAPIC timer at 100 Hz, IRQ dispatch, first `sti`.

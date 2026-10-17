@@ -18,6 +18,7 @@ struct pmm_stats {
 };
 
 void pmm_init(const struct boot_info *info);
+uint64_t pmm_reclaim_bootloader(void);
 uint64_t pmm_alloc(void);
 uint64_t pmm_alloc_contig(uint64_t pages, uint64_t align);
 int pmm_free(uint64_t phys);

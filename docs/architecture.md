@@ -3,9 +3,9 @@
 ## Overview
 
 SOBI OS is a monolithic x86-64 kernel written in freestanding C with a small
-amount of GNU assembler. Milestone 1 delivers the foundation: a bootable image,
-a correct bootloader handoff, serial logging, panic handling, and a test harness.
-Nothing else is present yet; see `status.md`.
+amount of GNU assembler. As of Milestone 4 it boots through Limine, owns its
+GDT, IDT, page tables, and frame allocator, reclaims bootloader memory, and
+has a slab heap. See `status.md` for what is still missing.
 
 ```
 +--------------------------------------------------------------+
@@ -19,8 +19,8 @@ Nothing else is present yet; see `status.md`.
 |     own 16 KiB stack in .bss, rbp = 0, call kmain            |
 |                              v                               |
 |  kernel/main.c               kmain                           |
-|     serial_init -> banner -> boot_collect_info               |
-|     -> boot_dump_info -> "boot: ok" -> test_run | halt       |
+|     serial, banner, memmap, arch_init, pmm, vmm, kheap       |
+|     -> "boot: ok" -> test_run | halt                          |
 +--------------------------------------------------------------+
 ```
 

@@ -1,22 +1,20 @@
-# Known limitations (Milestone 3)
+# Known limitations (Milestone 4)
 
 What the kernel does not do yet, and sharp edges in what it does.
 
 ## Not implemented
 
-- The kernel still runs on Limine's page tables. They live in
-  bootloader-reclaimable memory that the kernel does not yet own or protect.
 - Interrupts stay disabled (`IF` is never set). The PIC is remapped and
   masked, but there is no LAPIC timer and no IRQ handler that unmasks a line.
 - An exception that is not a breakpoint and not an armed fault fixup is fatal.
   There is no recovery for a double fault beyond the panic on IST1.
-- No virtual memory of our own and no kernel heap. The frame allocator
-  returns physical pages; callers in the kernel still rely on Limine's page
-  tables and the HHDM to touch them. Bootloader-reclaimable memory is held,
-  not returned to the free pool.
 - No tasks, processes, user mode, system calls, filesystem, or shell.
 - The framebuffer is neither requested nor used; output is serial only.
 - Single CPU only; APs are left where the firmware parked them.
+- The heap window is a fixed 64 MiB. There is no demand paging and no
+  per-process address space. `vmm_unmap` drops the mapping and empty page
+  tables; it does not free the data frame. Callers that allocated the frame
+  free it themselves.
 
 ## Sharp edges in what exists
 
@@ -31,9 +29,10 @@ What the kernel does not do yet, and sharp edges in what it does.
   `int_frame` and a symbolised RIP before panicking. There is still no
   stack walk.
 - `ASSERT()` is always compiled in, including release builds.
-- `boot_info` keeps pointers into bootloader-reclaimable memory (strings and
-  the memory map). That is correct today because nothing reclaims it; M4 must
-  copy them before `pmm_reclaim_bootloader()`.
+- `boot_info` pointers (name, version, cmdline, memmap) refer to copies in
+  kernel `.bss`. `pmm_reclaim_bootloader()` runs at the end of `vmm_init`,
+  after `cr3` holds kernel page tables. Observed reclaim: 1132 KiB. `cr3`
+  itself came from `pmm_alloc` (`0x76000`).
 - The ISO's `limine.conf` sets `timeout: 0`, so there is no boot menu. Press
   nothing; the kernel boots immediately. Change `timeout` for interactive use.
 - `make run` uses `-serial stdio`; Ctrl-C terminates QEMU (it is not passed

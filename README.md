@@ -5,7 +5,7 @@ from the ground up in C and assembly. SOBI OS is not derived from Linux, xv6, or
 any other existing kernel. It boots through the Limine bootloader protocol and
 runs under QEMU (BIOS and UEFI).
 
-Current version: 0.3.0 (Milestone 3: physical memory).
+Current version: 0.4.0 (Milestone 4: virtual memory and kernel heap).
 
 ## Status
 
@@ -26,7 +26,8 @@ for the full list.
 | QEMU test harness with explicit exit-status protocol | tested |
 | GDT, TSS, IDT, exception handlers, fault fixups | tested |
 | Physical frame allocator | tested |
-| Virtual memory, kernel heap | planned (M4) |
+| Kernel page tables, W^X, NX, bootloader reclaim | tested |
+| Slab kernel heap | tested |
 | LAPIC timer, interrupts enabled | planned (M5) |
 | Preemptive scheduler | planned (M6) |
 | User mode, processes, system calls | planned (M7-M8) |
@@ -40,7 +41,7 @@ QEMU (SeaBIOS or OVMF)
   -> Limine 12.9.3
        long mode, 4-level paging, HHDM, kernel mapped in the higher half
   -> kernel/arch/x86_64/entry.S   _start: switch to kernel stack, call kmain
-  -> kernel/main.c                kmain: serial, banner, Limine responses, memmap, boot: ok
+  -> kernel/main.c                kmain: serial, banner, memmap, GDT/IDT, PMM, own page tables, heap
 ```
 
 Source layout:
@@ -49,14 +50,15 @@ Source layout:
 boot/limine.conf          bootloader configuration placed on the ISO
 include/limine.h          vendored Limine protocol header (0BSD)
 include/sobi/             kernel headers
-kernel/arch/x86_64/       entry.S, cpu.c
+kernel/arch/x86_64/       entry, GDT, IDT, exceptions
+kernel/mm/                pmm.c, vmm.c, kheap.c
 kernel/boot/              limine_requests.c, boot.c
 kernel/drivers/serial.c   16550 UART driver
 kernel/debug/             log.c (kprintf), panic.c, test.c (test build only)
 kernel/lib/string.c       mem*/str* for the freestanding environment
 kernel/main.c             kmain
 scripts/                  fetch-limine.sh, mkiso.sh, run-qemu.sh, gdb.sh, verify-elf.sh
-tests/                    boot_test.sh, lib/run_qemu_test.sh
+tests/                    boot, exc, pmm, vmm suites
 docs/                     design and milestone documentation
 linker.ld                 higher-half layout with explicit program headers
 Makefile                  BUILD=debug|release|test
@@ -105,7 +107,7 @@ offline build, set `LIMINE_ARCHIVE=/path/to/limine-binary.tar.xz`.
   ___) | |_| | |_) | |  | |_| |___) |
  |____/ \___/|____/___|  \___/|____/
 
-SOBI OS 0.1.0 (x86-64, test build)
+SOBI OS 0.4.0 (x86-64, test build)
 
 [info ] boot: bootloader: Limine 12.9.3 (limine protocol base revision 6)
 [info ] boot: stack size request honoured
@@ -146,11 +148,11 @@ test: exit 17
 `make test` on 2026-10-17 (QEMU 9.2.1, TCG):
 
 ```
-verify-elf: PASS                     (41 checks)
-PASS  boot              (qemu exit 33)
-PASS  panic             (qemu exit 35)
-PASS  unknown-selector  (qemu exit 37)
-boot_test: all tests passed
+verify-elf: PASS
+PASS  boot, panic, unknown-selector, exc, df
+PASS  pmm, pmm-dbl, pmm-range
+PASS  vmm, kheap, kheap-dbl
+test: all suites passed
 ```
 
 The same test ISO also boots under OVMF (UEFI) with exit 33. See
@@ -158,16 +160,14 @@ The same test ISO also boots under OVMF (UEFI) with exit 33. See
 
 ## Roadmap
 
-See `docs/roadmap.md`. The next milestones are M2 (GDT/TSS/IDT, exception
-handlers with controlled fault tests), M3 (physical page allocator), M4 (virtual
-memory and kernel heap), M5 (LAPIC timer and interrupts).
+See `docs/roadmap.md`. M1 through M4 are done. Next is M5 (LAPIC timer and
+the first `sti`).
 
 ## Known limitations
 
-See `docs/limitations.md`. In short: the kernel currently runs with interrupts
-disabled on Limine's GDT and page tables, has no IDT, no memory allocator, no
-tasks, and no user mode. It boots, validates the boot protocol handoff, reports
-the machine's memory map over serial, and halts.
+See `docs/limitations.md`. The kernel owns its GDT, IDT, page tables, frame
+allocator, and heap, and it has reclaimed bootloader memory. Interrupts are
+still disabled. There are no tasks and no user mode.
 
 ## License
 
