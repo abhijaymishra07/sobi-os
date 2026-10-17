@@ -1,4 +1,4 @@
-# Known limitations (Milestone 1)
+# Known limitations (Milestone 3)
 
 What the kernel does not do yet, and sharp edges in what it does.
 
@@ -10,7 +10,10 @@ What the kernel does not do yet, and sharp edges in what it does.
   masked, but there is no LAPIC timer and no IRQ handler that unmasks a line.
 - An exception that is not a breakpoint and not an armed fault fixup is fatal.
   There is no recovery for a double fault beyond the panic on IST1.
-- No memory allocator of any kind. All state is static.
+- No virtual memory of our own and no kernel heap. The frame allocator
+  returns physical pages; callers in the kernel still rely on Limine's page
+  tables and the HHDM to touch them. Bootloader-reclaimable memory is held,
+  not returned to the free pool.
 - No tasks, processes, user mode, system calls, filesystem, or shell.
 - The framebuffer is neither requested nor used; output is serial only.
 - Single CPU only; APs are left where the firmware parked them.

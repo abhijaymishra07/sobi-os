@@ -221,3 +221,52 @@ no timer. See `limitations.md`.
 ### Next
 
 M3: bitmap physical frame allocator.
+
+## M3: Physical memory (2026-10-17)
+
+### Objective
+
+A bitmap frame allocator over the Limine map, with the reservation rules in
+`memory-rules.md`, a kernel-owned copy of the map and bootloader strings, and
+tests for round trips, contiguous allocation, exhaustion, reserved memory,
+double free, and out-of-range free.
+
+### Commands
+
+```
+make test
+```
+
+### Observed results
+
+```
+PASS  pmm        (qemu exit 33)
+PASS  pmm-dbl    (qemu exit 35, panic "double free")
+PASS  pmm-range  (qemu exit 35, panic "out of range")
+test: all suites passed
+```
+
+Serial (QEMU q35, 256 MiB, SeaBIOS):
+
+```
+[info ] pmm: 260416 KiB free across 65503 pages, bitmap 8 KiB at 0x74000 (18 regions copied)
+[info ] test: pmm: stats free=65104 used=399 npages=65503
+[info ] test: pmm: reserved 0xf0000 held
+[info ] test: pmm: round trip 0x76000
+[info ] test: pmm: contig 0x78000
+[info ] test: pmm: exhausted 65104 pages and recovered
+```
+
+`free + used == npages`. The reserved page `0xf0000` is not free. Contiguous
+8-page allocation is 32 KiB aligned. Exhaustion allocates exactly the free
+count, a further alloc returns 0, and freeing the list restores the count.
+Release builds return `-1` from `pmm_free` on those errors instead of panicking.
+
+### Remaining limitations
+
+Still on Limine's page tables. No heap. Bootloader-reclaimable memory is not
+freed. See `limitations.md`.
+
+### Next
+
+M4: kernel page tables, map/unmap, MMIO window, slab heap, reclaim bootloader memory.

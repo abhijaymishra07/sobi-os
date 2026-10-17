@@ -6,9 +6,10 @@
 #include <sobi/boot.h>
 #include <sobi/cpu.h>
 #include <sobi/interrupt.h>
+#include <sobi/pmm.h>
 #include <sobi/test.h>
 
-#define SOBI_VERSION "0.2.0"
+#define SOBI_VERSION "0.3.0"
 
 void kmain(void) __noreturn;
 
@@ -32,6 +33,7 @@ void kmain(void)
     boot_collect_info();
     boot_dump_info();
     arch_init();
+    pmm_init(boot_info);
 
     pr_info("boot", "boot: ok");
 

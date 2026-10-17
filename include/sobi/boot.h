@@ -19,6 +19,7 @@ extern const struct boot_info *boot_info;
 
 void boot_collect_info(void);
 void boot_dump_info(void);
+void boot_own_firmware_data(void);
 const char *boot_memmap_type_name(uint64_t type);
 
 extern char __kernel_start[], __kernel_end[];

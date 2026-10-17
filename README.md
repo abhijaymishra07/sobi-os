@@ -5,7 +5,7 @@ from the ground up in C and assembly. SOBI OS is not derived from Linux, xv6, or
 any other existing kernel. It boots through the Limine bootloader protocol and
 runs under QEMU (BIOS and UEFI).
 
-Current version: 0.2.0 (Milestone 2: CPU tables and exceptions).
+Current version: 0.3.0 (Milestone 3: physical memory).
 
 ## Status
 
@@ -25,7 +25,7 @@ for the full list.
 | ELF layout verification (`scripts/verify-elf.sh`) | tested |
 | QEMU test harness with explicit exit-status protocol | tested |
 | GDT, TSS, IDT, exception handlers, fault fixups | tested |
-| Physical memory allocator | planned (M3) |
+| Physical frame allocator | tested |
 | Virtual memory, kernel heap | planned (M4) |
 | LAPIC timer, interrupts enabled | planned (M5) |
 | Preemptive scheduler | planned (M6) |

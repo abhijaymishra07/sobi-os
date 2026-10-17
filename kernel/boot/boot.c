@@ -2,6 +2,7 @@
 #include <sobi/log.h>
 #include <sobi/panic.h>
 #include <sobi/assert.h>
+#include <sobi/string.h>
 
 extern volatile uint64_t limine_base_revision[];
 extern volatile struct limine_bootloader_info_request limine_bootloader_info_req;
@@ -107,4 +108,48 @@ void boot_dump_info(void)
     }
     pr_info("boot", "memory: %lu KiB usable, %lu KiB bootloader-reclaimable, %lu KiB executable+modules",
             usable / KiB(1), reclaimable / KiB(1), kernel / KiB(1));
+}
+
+#define OWNED_REGIONS 256
+#define OWNED_STR 128
+
+static struct limine_memmap_entry owned_entries[OWNED_REGIONS];
+static struct limine_memmap_entry *owned_ptrs[OWNED_REGIONS];
+static struct limine_memmap_response owned_map;
+static char owned_name[OWNED_STR];
+static char owned_version[OWNED_STR];
+static char owned_cmdline[512];
+
+static void copy_str(char *dst, size_t dstsz, const char *src)
+{
+    size_t i = 0;
+    if (!src)
+        src = "";
+    while (src[i] && i + 1 < dstsz) {
+        dst[i] = src[i];
+        i++;
+    }
+    dst[i] = '\0';
+}
+
+void boot_own_firmware_data(void)
+{
+    const struct limine_memmap_response *src = info.memmap;
+    if (src->entry_count > OWNED_REGIONS)
+        panic("boot: %lu memmap entries exceeds %d", src->entry_count, OWNED_REGIONS);
+    for (uint64_t i = 0; i < src->entry_count; i++) {
+        owned_entries[i] = *src->entries[i];
+        owned_ptrs[i] = &owned_entries[i];
+    }
+    owned_map.revision = src->revision;
+    owned_map.entry_count = src->entry_count;
+    owned_map.entries = owned_ptrs;
+    info.memmap = &owned_map;
+
+    copy_str(owned_name, sizeof(owned_name), info.bootloader_name);
+    copy_str(owned_version, sizeof(owned_version), info.bootloader_version);
+    copy_str(owned_cmdline, sizeof(owned_cmdline), info.cmdline);
+    info.bootloader_name = owned_name;
+    info.bootloader_version = owned_version;
+    info.cmdline = owned_cmdline;
 }
