@@ -109,9 +109,8 @@ static void schedule_locked(void)
     next->timeslice = QUANTUM;
     current = next;
     tss_set_rsp0(next->kstack_top);
-    if (next->cr3 != 0 && (cpu_read_cr3() & ~0xfffULL) != (next->cr3 & ~0xfffULL)) {
-        __asm__ volatile("mov %0, %%cr3" : : "r"(next->cr3) : "memory");
-    }
+    if (next->cr3 != 0)
+        vmm_switch(next->cr3);
     switches++;
     context_switch(&prev->saved_rsp, next->saved_rsp);
     reap();

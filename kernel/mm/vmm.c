@@ -1,4 +1,5 @@
 #include <sobi/vmm.h>
+#include <sobi/sched.h>
 #include <sobi/pmm.h>
 #include <sobi/boot.h>
 #include <sobi/string.h>
@@ -17,6 +18,7 @@ extern char __stack_guard_boot[], __stack_guard_ist1[], __stack_guard_ist2[];
 
 static uint64_t hhdm;
 static uint64_t pml4_phys;
+static uint64_t kernel_pml4;
 static uint64_t mmio_next = VMM_MMIO_BASE;
 static uint64_t stack_next = VMM_STACK_BASE;
 static bool nx_ok;
@@ -69,7 +71,66 @@ bool vmm_nx_supported(void)
 
 uint64_t vmm_kernel_cr3(void)
 {
-    return pml4_phys;
+    return kernel_pml4 ? kernel_pml4 : pml4_phys;
+}
+
+uint64_t vmm_clone_address_space(void)
+{
+    uint64_t frame = pmm_alloc();
+    if (frame == 0)
+        return 0;
+    uint64_t *dst = as_virt(frame);
+    uint64_t *src = as_virt(vmm_kernel_cr3());
+    memset(dst, 0, PAGE_SIZE);
+    for (int i = 256; i < 512; i++)
+        dst[i] = src[i];
+    return frame;
+}
+
+static void free_tree(uint64_t table_phys, int level)
+{
+    uint64_t *table = as_virt(table_phys);
+    for (int i = 0; i < 512; i++) {
+        if (!(table[i] & VMM_PRESENT))
+            continue;
+        uint64_t child = PTE_ADDR(table[i]);
+        if (level > 0)
+            free_tree(child, level - 1);
+        else
+            pmm_free(child);
+        table[i] = 0;
+    }
+    pmm_free(table_phys);
+}
+
+void vmm_destroy_address_space(uint64_t cr3)
+{
+    cr3 &= ~0xfffULL;
+    if (cr3 == 0 || cr3 == vmm_kernel_cr3())
+        return;
+    if ((cpu_read_cr3() & ~0xfffULL) == cr3)
+        vmm_switch(vmm_kernel_cr3());
+    uint64_t *pml4 = as_virt(cr3);
+    for (int i = 0; i < 256; i++) {
+        if (!(pml4[i] & VMM_PRESENT))
+            continue;
+        free_tree(PTE_ADDR(pml4[i]), 2);
+        pml4[i] = 0;
+    }
+    pmm_free(cr3);
+}
+
+void vmm_switch(uint64_t cr3)
+{
+    cr3 &= ~0xfffULL;
+    if (cr3 == 0)
+        return;
+    pml4_phys = cr3;
+    if ((cpu_read_cr3() & ~0xfffULL) != cr3)
+        __asm__ volatile("mov %0, %%cr3" : : "r"(cr3) : "memory");
+    struct task *task = sched_current();
+    if (task)
+        task->cr3 = cr3;
 }
 
 static bool is_guard(uint64_t virt)
@@ -326,6 +387,7 @@ void vmm_init(void)
     map_kernel_span((uint64_t)__data_start, (uint64_t)__kernel_end, VMM_WRITE | VMM_GLOBAL | VMM_NX);
     map_hhdm();
 
+    kernel_pml4 = pml4_phys;
     __asm__ volatile("mov %0, %%cr3" : : "r"(pml4_phys) : "memory");
 
     uint64_t reclaimed = pmm_reclaim_bootloader();

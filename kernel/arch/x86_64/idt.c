@@ -54,6 +54,13 @@ void idt_init(void)
     pr_info("cpu", "idt: 256 gates, df on ist1, nmi/mc on ist2");
 }
 
+void idt_allow_user(int vec)
+{
+    if (vec < 0 || vec > 255)
+        return;
+    idt[vec].type = 0xee;
+}
+
 void arch_init(void)
 {
     gdt_init();

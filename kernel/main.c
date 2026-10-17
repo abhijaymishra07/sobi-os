@@ -11,9 +11,10 @@
 #include <sobi/kheap.h>
 #include <sobi/timer.h>
 #include <sobi/sched.h>
+#include <sobi/proc.h>
 #include <sobi/test.h>
 
-#define SOBI_VERSION "0.6.0"
+#define SOBI_VERSION "0.7.0"
 
 void kmain(void) __noreturn;
 
@@ -42,6 +43,7 @@ void kmain(void)
     kheap_init();
     timer_init();
     sched_init();
+    proc_init();
 
     pr_info("boot", "boot: ok");
 

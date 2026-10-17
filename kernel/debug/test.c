@@ -16,6 +16,7 @@
 #include <sobi/timer.h>
 #include <sobi/irq.h>
 #include <sobi/sched.h>
+#include <sobi/proc.h>
 #include <limine.h>
 
 extern char exc_ud2_insn[], exc_ud2_resume[];
@@ -558,6 +559,11 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=sched"))
         test_sched();
+
+    if (cmdline_has(cmdline, "test=user")) {
+        proc_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
 
     if (cmdline_has(cmdline, "test=boot") || !cmdline || !*cmdline) {
         pr_info("test", "boot test complete");

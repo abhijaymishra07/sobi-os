@@ -53,6 +53,7 @@ struct int_frame {
 void gdt_init(void);
 void tss_set_rsp0(uint64_t rsp);
 void idt_init(void);
+void idt_allow_user(int vec);
 void pic_init(void);
 void pic_eoi(uint8_t irq);
 void arch_init(void);
@@ -63,5 +64,6 @@ bool fault_took(uint64_t *cr2);
 extern volatile uint64_t breakpoint_hits;
 
 void exception_dispatch(struct int_frame *frame);
+bool proc_user_trap(struct int_frame *frame);
 
 #endif

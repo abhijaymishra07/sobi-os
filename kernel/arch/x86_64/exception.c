@@ -103,6 +103,12 @@ static void dump_frame(const struct int_frame *f)
     }
 }
 
+__attribute__((weak)) bool proc_user_trap(struct int_frame *frame)
+{
+    (void)frame;
+    return false;
+}
+
 void exception_dispatch(struct int_frame *frame)
 {
     if (frame->vector == VEC_BP) {
@@ -117,6 +123,9 @@ void exception_dispatch(struct int_frame *frame)
         frame->rip = expect.resume_rip;
         return;
     }
+
+    if ((frame->cs & 3) == 3 && proc_user_trap(frame))
+        return;
 
     if (frame->vector >= 32) {
         irq_dispatch(frame);

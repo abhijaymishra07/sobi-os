@@ -399,3 +399,34 @@ heap live bytes matched the pre-create snapshot.
 ### Next
 
 M7: ring 3, per-process address spaces, user copies.
+
+## M7: User mode and processes (2026-10-17)
+
+### Objective
+
+Per-process page tables, ring-3 entry through `iretq`, and checked copies
+between kernel and user memory.
+
+### Observed results
+
+`test=user`:
+
+```
+[info ] test: user: trap ok
+[info ] proc: killed pid 2 vec 14
+[info ] test: user: killed pid 2
+[info ] test: user: isolation ok
+[info ] test: user: all checks passed
+```
+
+A user page at `0x400000` executed `int 0x80` and returned to the kernel. A
+load of `0xffffffff80000000` from ring 3 was a page fault attributed to pid 2,
+not a kernel panic. A second address space could not translate the first
+process's page. `copy_from_user` accepted the mapped byte and rejected a
+kernel pointer and an unmapped user address.
+
+User stack top is the canonical address `0x00007ffffffff000`.
+
+### Next
+
+M8: `syscall` / `sysret` and the core call table.

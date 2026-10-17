@@ -17,6 +17,9 @@
 #define VMM_HEAP_LIMIT (VMM_HEAP_BASE + 64ULL * 1024 * 1024)
 
 void vmm_init(void);
+uint64_t vmm_clone_address_space(void);
+void vmm_switch(uint64_t cr3);
+void vmm_destroy_address_space(uint64_t cr3);
 bool vmm_map(uint64_t virt, uint64_t phys, uint64_t pages, uint64_t flags);
 bool vmm_unmap(uint64_t virt, uint64_t pages);
 bool vmm_protect(uint64_t virt, uint64_t pages, uint64_t flags);

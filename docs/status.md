@@ -7,7 +7,7 @@ Each item is exactly one of:
 - **partially implemented**: some of the item works and the gap is named.
 - **planned**: not started; see `roadmap.md`.
 
-Last updated: Milestone 6 (2026-10-17).
+Last updated: Milestone 7 (2026-10-17).
 
 ## Foundation
 
@@ -49,6 +49,10 @@ Last updated: Milestone 6 (2026-10-17).
 | Kernel tasks, round-robin, idle, exit reaper | tested | `sched` scenario, resources restored |
 | Timer preemption without an explicit yield | tested | `sched: preempt ok switches 14` |
 | `sched_block` / `sched_wakeup` and sleep wheel | tested | wake-once and sleep order `20,40,80` |
+| Per-process address space cloned from the kernel half | tested | `user: isolation ok` |
+| Ring-3 entry and `int 0x80` return | tested | `user: trap ok` |
+| User fault kills the process instead of panicking | tested | `killed pid 2 vec 14` |
+| `copy_from_user` range checks and fault fixup | tested | kernel and unmapped pointers return `-EFAULT` |
 
 ## Planned (initial delivery)
 
@@ -59,7 +63,7 @@ Last updated: Milestone 6 (2026-10-17).
 | Kernel page tables, map/unmap, MMIO mapping, kernel heap | tested | M4 |
 | LAPIC timer, interrupts enabled, uptime | tested | M5 |
 | Tasks, context switch, round-robin, preemption | tested | M6 |
-| User mode, processes, address-space isolation | planned | M7 |
+| User mode, processes, address-space isolation | tested | M7 |
 | System calls | planned | M8 |
 | Initramfs and read-only VFS | planned | M9 |
 | ELF loader, user runtime, user programs | planned | M10 |
