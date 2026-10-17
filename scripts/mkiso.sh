@@ -19,6 +19,9 @@ trap 'rm -rf "${STAGE}"' EXIT
 
 mkdir -p "${STAGE}/boot/limine" "${STAGE}/EFI/BOOT"
 cp "${KERNEL}" "${STAGE}/boot/sobi-kernel.elf"
+if [[ -f "${ROOT}/build/initramfs.tar" ]]; then
+    cp "${ROOT}/build/initramfs.tar" "${STAGE}/boot/initramfs.tar"
+fi
 cp "${CONF}" "${STAGE}/boot/limine/limine.conf"
 if [[ -n "${CMDLINE}" ]]; then
     printf 'cmdline: %s\n' "${CMDLINE}" >> "${STAGE}/boot/limine/limine.conf"

@@ -3,6 +3,7 @@
 #include <sobi/serial.h>
 #include <sobi/log.h>
 #include <sobi/panic.h>
+#include <sobi/string.h>
 #include <sobi/boot.h>
 #include <sobi/cpu.h>
 #include <sobi/interrupt.h>
@@ -14,9 +15,10 @@
 #include <sobi/proc.h>
 #include <sobi/syscall.h>
 #include <sobi/vfs.h>
+#include <sobi/elf.h>
 #include <sobi/test.h>
 
-#define SOBI_VERSION "0.9.0"
+#define SOBI_VERSION "0.10.0"
 
 void kmain(void) __noreturn;
 
@@ -41,6 +43,15 @@ void kmain(void)
     boot_dump_info();
     arch_init();
     pmm_init(boot_info);
+    if (boot_info->module && boot_info->module_size) {
+        uint64_t pages = (boot_info->module_size + PAGE_SIZE - 1) / PAGE_SIZE;
+        uint64_t frame = pmm_alloc_contig(pages, PAGE_SIZE);
+        if (frame) {
+            memcpy((void *)(boot_info->hhdm_offset + frame), boot_info->module, (size_t)boot_info->module_size);
+            vfs_set_initramfs((void *)(boot_info->hhdm_offset + frame), (size_t)boot_info->module_size);
+            pr_info("boot", "module %lu bytes", boot_info->module_size);
+        }
+    }
     vmm_init();
     kheap_init();
     timer_init();

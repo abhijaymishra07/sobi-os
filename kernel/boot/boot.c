@@ -11,6 +11,7 @@ extern volatile struct limine_hhdm_request limine_hhdm_req;
 extern volatile struct limine_memmap_request limine_memmap_req;
 extern volatile struct limine_executable_address_request limine_exec_addr_req;
 extern volatile struct limine_stack_size_request limine_stack_size_req;
+extern volatile struct limine_module_request limine_module_req;
 
 static struct boot_info info;
 const struct boot_info *boot_info = &info;
@@ -71,6 +72,14 @@ void boot_collect_info(void)
         info.cmdline = limine_cmdline_req.response->cmdline;
     else
         info.cmdline = "";
+
+    info.module = NULL;
+    info.module_size = 0;
+    if (limine_module_req.response && limine_module_req.response->module_count > 0 &&
+        limine_module_req.response->modules && limine_module_req.response->modules[0]) {
+        info.module = limine_module_req.response->modules[0]->address;
+        info.module_size = limine_module_req.response->modules[0]->size;
+    }
 
     ASSERT(info.kernel_virt_base == (vaddr_t)__kernel_start);
     ASSERT(info.hhdm_offset >= 0xffff800000000000ULL);

@@ -7,7 +7,7 @@ Each item is exactly one of:
 - **partially implemented**: some of the item works and the gap is named.
 - **planned**: not started; see `roadmap.md`.
 
-Last updated: Milestone 9 (2026-10-17).
+Last updated: Milestone 10 (2026-10-17).
 
 ## Foundation
 
@@ -55,6 +55,7 @@ Last updated: Milestone 9 (2026-10-17).
 | `copy_from_user` range checks and fault fixup | tested | kernel and unmapped pointers return `-EFAULT` |
 | `syscall` / `sysret` and the core call table | tested | `syscall: wait 42`, bad pointer, bad number, huge size |
 | ustar initramfs, VFS, tmpfs, file descriptors | tested | `vfs` scenario: lookup, EOF, tmpfs, fd limit |
+| ELF64 validation and user program spawn | tested | `elf: hello exit 0`, malformed images rejected |
 
 ## Planned (initial delivery)
 
@@ -68,7 +69,7 @@ Last updated: Milestone 9 (2026-10-17).
 | User mode, processes, address-space isolation | tested | M7 |
 | System calls | tested | M8 |
 | Initramfs and read-only VFS | tested | M9 |
-| ELF loader, user runtime, user programs | planned | M10 |
+| ELF loader, user runtime, user programs | tested | M10 |
 | init process and shell | planned | M11 |
 | Test consolidation, docs refresh | planned | M12 |
 

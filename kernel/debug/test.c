@@ -19,6 +19,7 @@
 #include <sobi/proc.h>
 #include <sobi/syscall.h>
 #include <sobi/vfs.h>
+#include <sobi/elf.h>
 #include <limine.h>
 
 extern char exc_ud2_insn[], exc_ud2_resume[];
@@ -574,6 +575,11 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=vfs")) {
         vfs_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=elf")) {
+        elf_self_test();
         test_exit(TEST_EXIT_CODE_PASS);
     }
 

@@ -1,4 +1,4 @@
-# Known limitations (Milestone 9)
+# Known limitations (Milestone 10)
 
 What the kernel does not do yet, and sharp edges in what it does.
 
@@ -7,10 +7,9 @@ What the kernel does not do yet, and sharp edges in what it does.
 - The LAPIC timer is the only live interrupt. The PIC stays masked, and there
   is no I/O APIC. `sched_sleep_ms` blocks the current task. `sleep_poll` is
   still a halt loop for code that must not sleep.
-- One run queue, one CPU. `spawn` returns `-ENOENT` until the ELF loader
-  exists. `read` on fd 0 returns `-EAGAIN` when no byte is queued. The
-  initramfs module is optional; the VFS test feeds ustar bytes directly.
-  Empty heap slabs are kept.
+- One run queue, one CPU. `spawn` still returns `-ENOENT` from the syscall;
+  the loader entry used by the ELF test is `elf_spawn`. `read` on fd 0
+  returns `-EAGAIN` when no byte is queued. Empty heap slabs are kept.
 - An exception that is not a breakpoint and not an armed fault fixup is fatal.
   There is no recovery for a double fault beyond the panic on IST1.
 - No tasks, processes, user mode, system calls, filesystem, or shell.

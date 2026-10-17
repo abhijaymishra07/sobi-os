@@ -93,7 +93,42 @@ gdb: $(ISO)
 verify-elf: $(KERNEL)
 	./scripts/verify-elf.sh $(KERNEL)
 
-test:
+USER_CC := gcc
+USER_CFLAGS := -ffreestanding -fno-stack-protector -fno-pic -fno-pie -m64 -mno-red-zone
+USER_CFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -nostdlib
+USER_CMDS := hello echo cat ls
+
+.PHONY: user
+
+user: kernel/proc/hello_blob.c build/initramfs.tar
+
+build/user/crt0.o: user/libc/crt0.S
+	@mkdir -p build/user
+	$(USER_CC) $(USER_CFLAGS) -c $< -o $@
+
+build/user/usys.o: user/libc/syscall.S
+	@mkdir -p build/user
+	$(USER_CC) $(USER_CFLAGS) -c $< -o $@
+
+build/user/%.o: user/commands/%.c user/libc/unistd.h
+	@mkdir -p build/user
+	$(USER_CC) $(USER_CFLAGS) -c $< -o $@
+
+build/user/%.elf: build/user/%.o build/user/crt0.o build/user/usys.o user/user.ld
+	ld -nostdlib -static -T user/user.ld -o $@ build/user/crt0.o build/user/usys.o build/user/$*.o
+
+kernel/proc/hello_blob.c: build/user/hello.elf scripts/mkblob.py
+	python3 scripts/mkblob.py $< $@ hello_elf
+
+build/initramfs.tar: $(addprefix build/user/,$(addsuffix .elf,$(USER_CMDS)))
+	@mkdir -p build/initramfs/bin
+	cp build/user/hello.elf build/initramfs/bin/hello
+	cp build/user/echo.elf build/initramfs/bin/echo
+	cp build/user/cat.elf build/initramfs/bin/cat
+	cp build/user/ls.elf build/initramfs/bin/ls
+	tar --format=ustar -cf $@ -C build/initramfs bin
+
+test: user
 	$(MAKE) BUILD=test verify-elf
 	$(MAKE) BUILD=test iso
 	@fail=0; \

@@ -1,4 +1,5 @@
 build/
+kernel/proc/hello_blob.c
 third_party/limine/
 *.iso
 *.o

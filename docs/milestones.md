@@ -490,3 +490,29 @@ Limine is asked for an optional `/boot/initramfs.tar` module.
 ### Next
 
 M10: ELF64 loader, user libc, and the first user programs.
+
+## M10: ELF loader and user programs (2026-10-17)
+
+### Objective
+
+Validate and map ELF64 executables, ship a small static userland, and spawn
+`hello`.
+
+### Observed results
+
+Limine delivered the initramfs (`module 30720 bytes`). `test=elf`:
+
+```
+[info ] test: elf: malformed rejected
+hello
+[info ] test: elf: hello exit 0
+[info ] test: elf: all checks passed
+```
+
+Bad magic, a truncated header, an entry in kernel space, and overlapping
+`PT_LOAD` segments are rejected with `-ENOEXEC`. The host-built `hello`
+program (crt0 plus a `write` syscall stub) printed `hello` and exited 0.
+
+### Next
+
+M11: init and the shell.

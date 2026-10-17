@@ -13,6 +13,8 @@ struct boot_info {
     vaddr_t kernel_virt_base;
     const struct limine_memmap_response *memmap;
     const char *cmdline;
+    const void *module;
+    uint64_t module_size;
 };
 
 extern const struct boot_info *boot_info;

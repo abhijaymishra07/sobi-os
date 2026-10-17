@@ -17,7 +17,7 @@ verified dependencies, not feature names.
 | M7 | User mode and processes | M6 | done: iretq, int 0x80, isolation, copy_from_user |
 | M8 | System calls | M7 | done: syscall/sysret, wait 42, pointer and size checks |
 | M9 | Initramfs and VFS | M8 | done: ustar, `/` and `/tmp`, fd table, file syscalls |
-| M10 | ELF loader and user runtime | M9 | ELF64 validation, segment mapping, user stack and argv, minimal libc, programs from the initramfs; malformed-ELF tests |
+| M10 | ELF loader and user runtime | M9 | done: hello exits 0, malformed ELFs rejected |
 | M11 | init and shell | M10 | init spawns the shell; help/echo/clear/pwd/ls/cat/ps/meminfo/uptime backed by real syscalls |
 | M12 | Test consolidation and docs | M11 | regression suite, fault-injection tests, every doc refreshed from actual runs, status list finalised |
 
