@@ -1,0 +1,31 @@
+name: Bug report
+description: Something in SOBI OS crashes, hangs or misbehaves
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        make run-gui
+        $ cat | upper
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Serial log or panic message
+      description: Paste the output of `make run` (or the failing `build/test/*.serial.log`).
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "Ubuntu 26.04, gcc 15.2, QEMU 10.2, commit abc1234"

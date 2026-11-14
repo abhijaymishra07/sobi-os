@@ -1,0 +1,15 @@
+name: Feature request
+description: Propose a kernel feature, driver or user program
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should SOBI OS do?
+    validations:
+      required: true
+  - type: textarea
+    id: test
+    attributes:
+      label: How would we test it?
+      description: Every feature lands with a QEMU test in tests/. Describe what it would assert.

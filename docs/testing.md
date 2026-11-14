@@ -54,34 +54,50 @@ Scenario selection uses the Limine `cmdline:` key: `scripts/mkiso.sh` appends
 `cmdline: <text>` to `limine.conf` for a per-scenario ISO, and
 `kernel/debug/test.c` matches whitespace-separated `test=<name>` tokens.
 
-## Current scenarios (`tests/boot_test.sh`)
+## Current scenarios
 
-| Name | cmdline | Expect | Required serial text |
-|---|---|---|---|
-| `boot` | `test=boot` | 33 | banner, `limine protocol base revision 6`, `hhdm offset: 0xffff8`, `memory map (`, `boot: ok`, `boot test complete` |
-| `panic` | `test=panic` | 35 | `boot: ok`, `!!! KERNEL PANIC !!!`, `at kernel/debug/test.c:`, `reason: deliberate test panic (value=42)`, `system halted` |
-| `unknown-selector` | `test=does-not-exist` | 37 | `boot: ok`, `unknown test selector` |
+`make test` runs `verify-elf` and then 28 QEMU scenarios. `disk` and
+`net-live` attach extra QEMU devices through `SOBI_QEMU_EXTRA` (a temporary
+virtio-blk image, and virtio-net on QEMU user networking with echo servers on
+the host).
 
-## Results (2026-10-17)
+| Scenario | Script | cmdline | Expect | What it checks |
+|---|---|---|---|---|
+| `boot` | `boot_test.sh` | `test=boot` | PASS | banner, boot protocol, memory map |
+| `panic` | `boot_test.sh` | `test=panic` | PANIC | deliberate panic is reported and classified |
+| `unknown-selector` | `boot_test.sh` | `test=does-not-exist` | FAIL | bad selector is reported as failure |
+| `console` | `console_test.sh` | `test=console` | PASS | framebuffer text, keyboard scancodes, real IRQ 1 via I/O APIC |
+| `disk-write` | `disk_test.sh` | `test=disk-write` | PASS | virtio-blk + block cache; sobifs format and write |
+| `disk-read` | `disk_test.sh` | `test=disk-read` | PASS | second boot reads the file back |
+| `elf` | `elf_test.sh` | `test=elf` | PASS | ELF validation, hello exits 0 |
+| `exc` | `exc_test.sh` | `test=exc` | PASS | #UD, #DE, #PF, #GP, int3 handled through fixups; symbolised RIP |
+| `df` | `exc_test.sh` | `test=df` | PANIC | double fault lands on IST1 and panics |
+| `multi` | `multi_test.sh` | `test=multi` | PASS | two user processes run concurrently |
+| `net-live` | `net_live_test.sh` | `test=net-live` | PASS | virtio-net UDP and TCP echo with host servers |
+| `net` | `net_test.sh` | `test=net` | PASS | ARP/IPv4/ICMP/UDP/TCP/DNS over loopback |
+| `pipe` | `pipe_test.sh` | `test=pipe` | PASS | pipe blocking, wrap-around, EOF |
+| `pmm` | `pmm_test.sh` | `test=pmm` | PASS | frame allocator round trip, contiguous runs, exhaustion |
+| `pmm-dbl` | `pmm_test.sh` | `test=pmm-dbl` | PANIC | double free panics |
+| `pmm-range` | `pmm_test.sh` | `test=pmm-range` | PANIC | out-of-range free panics |
+| `sched` | `sched_test.sh` | `test=sched` | PASS | preemption, sleep ordering, wake-once, exit reaping |
+| `shell` | `shell_test.sh` | `test=shell` | PASS | scripted shell session incl. ls, cat, cat | upper, clean exit |
+| `sobifs` | `sobifs_test.sh` | `test=sobifs` | PASS | journalled FS on ramdisk: persist, torn-journal replay, disk full |
+| `sync` | `sync_test.sh` | `test=sync` | PASS | mutex, semaphore, spinlock |
+| `syscall` | `syscall_test.sh` | `test=syscall` | PASS | syscall/sysret table, bad pointers, spawn errors |
+| `timer` | `timer_test.sh` | `test=timer` | PASS | LAPIC calibration, 100 Hz ticks, uptime |
+| `trace` | `trace_test.sh` | `test=trace` | PASS | ring buffer + live scheduler/syscall hooks |
+| `user` | `user_test.sh` | `test=user` | PASS | ring 3 entry, isolation, user fault kills process |
+| `vfs` | `vfs_test.sh` | `test=vfs` | PASS | lookup, EOF, tmpfs, fd limit |
+| `vmm` | `vmm_test.sh` | `test=vmm` | PASS | map/unmap/protect, W^X, NX faults, guard pages |
+| `kheap` | `vmm_test.sh` | `test=kheap` | PASS | slab heap alignment, reuse, stress |
+| `kheap-dbl` | `vmm_test.sh` | `test=kheap-dbl` | PANIC | heap double free panics |
 
-```
-$ make test
-verify-elf: PASS
-PASS  boot              (qemu exit 33, 42 serial lines)
-PASS  panic             (qemu exit 35, 47 serial lines)
-PASS  unknown-selector  (qemu exit 37, 42 serial lines)
-boot_test: all tests passed
-```
+## Results
 
-Additional manual checks performed for M1 (not yet automated):
-
-- The test ISO boots under OVMF (`make run-uefi` equivalent with the exit
-  device) and exits 33.
-- The timeout path was exercised by running the debug ISO (which never writes
-  the exit port) through the harness: classified as `timeout ... (kernel hung)`
-  with the log tail printed.
-- GDB attach via `make gdb`: breakpoint on `kmain` hit, backtrace
-  `kmain <- _start`, `boot_info` fields readable after `boot_collect_info`.
+`make test` on 2026-11-14 (QEMU 10.2.1, TCG, gcc 15.2) from a fresh clone:
+`verify-elf: PASS` and all 28 scenarios `PASS` (`test: all suites
+passed`) in about 30 seconds. The same suite runs in GitHub Actions on every
+push (`.github/workflows/ci.yml`).
 
 ## Writing a new scenario
 

@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and QEMU test suite
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    timeout-minutes: 30
+    steps:
+      - name: Install toolchain
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential binutils make python3 curl ca-certificates xz-utils file \
+            xorriso qemu-system-x86 git
+          gcc --version | head -1
+          qemu-system-x86_64 --version | head -1
+
+      - uses: actions/checkout@v4
+
+      - name: Build debug and release kernels
+        run: |
+          make iso
+          make BUILD=release iso
+
+      - name: Run the QEMU test suite
+        run: make test
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: sobi-os-iso
+          path: build/release/sobi.iso
+
+      - name: Upload serial logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serial-logs
+          path: build/test/*.serial.log

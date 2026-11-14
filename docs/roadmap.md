@@ -18,23 +18,24 @@ verified dependencies, not feature names.
 | M8 | System calls | M7 | done: syscall/sysret, wait 42, pointer and size checks |
 | M9 | Initramfs and VFS | M8 | done: ustar, `/` and `/tmp`, fd table, file syscalls |
 | M10 | ELF loader and user runtime | M9 | done: hello exits 0, malformed ELFs rejected |
-| M11 | init and shell | M10 | init spawns the shell; help/echo/clear/pwd/ls/cat/ps/meminfo/uptime backed by real syscalls |
+| M11 | init and shell | M10 | done: init spawns the shell; help/echo/clear/pwd/uptime built-ins, ls/cat/upper programs, `a \| b` pipelines, interactive on the framebuffer (`ps`/`meminfo` still missing) |
 | M12 | Test consolidation and docs | M11 | regression suite, fault-injection tests, every doc refreshed from actual runs, status list finalised |
 
 Process creation is `spawn` first; `fork` waits for copy-on-write.
 
 ## After the initial delivery
 
-- Block device (virtio-blk or AHCI) and one persistent filesystem with
-  tests for persistence across reboot.
-- Pipes, then message passing and shared memory; synchronisation primitives
-  with lock-order checking.
-- Keyboard and framebuffer console through the I/O APIC.
-- `fork` with copy-on-write, demand paging, memory-mapped files.
-- Networking: virtio-net, Ethernet, ARP, IPv4, ICMP, UDP, TCP, sockets.
-- Observability: event log, syscall and context-switch counters, page-fault
-  counters, scheduler latency, exported through a controlled interface and a
-  shell command.
-- Multicore: AP startup, per-CPU data, IPIs, TLB shootdown, SMP scheduling.
-- Security audit and fault injection; documented threat model.
-- Benchmarks: syscall overhead, context switch, allocation, process launch.
+| Item | Status |
+|---|---|
+| Block device and a persistent filesystem, tested across reboot | done: virtio-blk + sobifs; not yet mounted into the VFS |
+| Pipes | done (two-stage pipelines); message passing and shared memory planned |
+| Synchronisation primitives | done (spinlock, mutex, semaphore); lock-order checking planned |
+| Keyboard and framebuffer console through the I/O APIC | done |
+| Observability: event log, syscall/context-switch/page-fault counters, scheduler latency | done in the kernel; shell command planned |
+| Networking: virtio-net, Ethernet, ARP, IPv4, ICMP, UDP, TCP | done; socket syscalls planned |
+| Mount sobifs at `/disk`, shell redirection, file utilities | next |
+| Interrupt-driven virtio, asynchronous `spawn`, process memory reclamation | planned |
+| `fork` with copy-on-write, demand paging, memory-mapped files | planned |
+| Multicore: AP startup, per-CPU data, IPIs, TLB shootdown, SMP scheduling | planned |
+| Security audit and fault injection; documented threat model | planned |
+| Benchmarks: syscall overhead, context switch, allocation, process launch | planned |

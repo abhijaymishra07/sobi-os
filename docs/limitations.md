@@ -43,9 +43,9 @@ What the kernel does not do yet, and sharp edges in what it does.
 
 ## Environment
 
-- Verified only under QEMU 9.2.1 with TCG (no KVM on the development host)
-  on the `q35` machine with SeaBIOS and OVMF. Real hardware has not been
-  tried.
+- Verified only under QEMU (9.2.1 and 10.2.1) with TCG on the `q35` machine
+  with SeaBIOS and OVMF. Real hardware has not been tried; the drivers assume
+  QEMU's devices (legacy virtio, i8042, the I/O APIC at its default address).
 - The host gcc is used in freestanding mode instead of a dedicated
   `x86_64-elf` cross toolchain. This works because nothing from the host libc
   or libgcc is linked (`nm -u` is verified empty), but a change in gcc that

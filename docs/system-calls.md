@@ -72,9 +72,11 @@ Returns the parent’s pid, or 0 if there is no parent.
 
 ### `spawn` (3)
 
-`spawn(const char *path, uint64_t argv, uint64_t envp)`. `path` is copied out
-of user memory. Until an executable loader exists, a well-formed path returns
-`-ENOENT`. A bad pointer returns `-EFAULT`.
+`spawn(const char *path)`. Loads the ELF at `path` from the VFS and runs it as
+a child process. The child runs to completion inside the parent's system call
+(nested entry into user mode), then `spawn` returns the child's pid; `wait`
+then returns its exit status. A bad pointer returns `-EFAULT`, a missing file
+`-ENOENT`, and a malformed executable `-ENOEXEC`.
 
 ### `wait` (4)
 
@@ -85,18 +87,29 @@ also stored there. No matching child returns `-ECHILD`.
 
 ### `read` (5)
 
-`read(int fd, void *buf, size_t len)`. Only fd 0 is accepted. The call blocks
-until at least one byte is available from the kernel input queue or the serial
-port, copies those bytes to `buf`, and returns the count. A null read returns
-0. A bad buffer returns `-EFAULT`. Any other fd returns `-EBADF`. Counts above
-1 MiB return `-EINVAL`.
+`read(int fd, void *buf, size_t len)`.
+
+- fd 0 reads the process's input pipe if it is the right side of a pipeline.
+  Otherwise it returns one byte typed on the PS/2 keyboard or received on the
+  serial port, or `-EAGAIN` when none is queued.
+- fd 3 and above read from an open VFS file and advance its offset. Reading at
+  end of file returns 0.
+
+A bad buffer returns `-EFAULT`. A count above 4096 returns `-EINVAL`. Any
+other fd returns `-EBADF`.
 
 ### `write` (6)
 
-`write(int fd, const void *buf, size_t len)`. Fd 1 and fd 2 copy from the user
-buffer and send the bytes to the serial port. The return value is the number of
-bytes written. A bad buffer returns `-EFAULT`. A count above 1 MiB returns
-`-EINVAL`. Any other fd returns `-EBADF`.
+`write(int fd, const void *buf, size_t len)`.
+
+- fd 1 writes to the process's output pipe if it is the left side of a
+  pipeline; otherwise fd 1 and fd 2 go to the serial port and the framebuffer
+  console. The console understands `ESC[2J` (clear) and `ESC[H` (home).
+- fd 3 and above write to an open VFS file (tmpfs only; the initramfs is
+  read-only and returns `-EROFS`).
+
+The return value is the number of bytes written. A bad buffer returns
+`-EFAULT`. A count above 4096 returns `-EINVAL`. Any other fd returns `-EBADF`.
 
 ### `sleep` (7)
 
@@ -118,3 +131,46 @@ break. An increment of 0 returns the current break without mapping. A positive
 increment maps new user read/write pages; a negative increment unmaps pages
 that are no longer covered. The break starts at `0x400000`. An adjustment that
 would leave the user image or run into the user stack returns `-EINVAL`.
+
+### `open` (11)
+
+`open(const char *path, int flags)` returns a file descriptor (3 and above).
+Flags: `O_RDONLY`, `O_WRONLY`, `O_RDWR`, `O_CREAT` (create in a writable
+filesystem), `O_DIRECTORY` (required to open a directory for `readdir`).
+Returns `-ENOENT`, `-ENOTDIR`, `-EROFS`, `-EINVAL`, `-EMFILE` (16 descriptors
+per process) or `-EFAULT`.
+
+### `close` (12)
+
+`close(int fd)` releases a descriptor. Closing twice returns `-EBADF`.
+
+### `lseek` (13)
+
+`lseek(int fd, int64_t off, int whence)` with `SEEK_SET`, `SEEK_CUR` or
+`SEEK_END`. Returns the new offset.
+
+### `mkdir` (14) and `unlink` (15)
+
+`mkdir(const char *path)` and `unlink(const char *path)` operate on tmpfs
+(`/tmp`). The read-only initramfs returns `-EROFS`; removing a non-empty
+directory returns `-ENOTEMPTY`.
+
+### `stat` (16)
+
+`stat(const char *path, struct vfs_stat *st)` fills `{ mode, ino, size }`.
+`mode` carries `S_IFDIR` (`0x4000`) or `S_IFREG` (`0x8000`).
+
+### `readdir` (17)
+
+`readdir(int fd, struct vfs_dirent *ent)` returns the next entry of a
+directory opened with `O_DIRECTORY` and advances the position. The entry is
+`{ char name[100]; uint32_t ino; uint32_t mode; }`. Returns 0 per entry and a
+negative value at the end of the directory.
+
+### `pipeline` (18)
+
+`pipeline(const char *a, const char *b)` runs `a | b`: both programs start as
+concurrent processes, `a`'s fd 1 feeds a kernel pipe and `b`'s fd 0 drains it.
+Each end of the pipe is closed when its process exits, so `b` sees end of file
+after `a` finishes. Returns `b`'s exit status, or a negative errno if either
+program cannot be loaded.

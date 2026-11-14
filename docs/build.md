@@ -2,9 +2,12 @@
 
 ## Requirements
 
-Verified host: Ubuntu 25.04, gcc 14.2.0, GNU binutils 2.44, GNU Make 4.4.1,
-QEMU 9.2.1, GDB 16.2, xorriso 1.5.6, curl. OVMF (`/usr/share/OVMF/OVMF_CODE_4M.fd`)
-is optional and only used by `make run-uefi`.
+Verified hosts: Ubuntu 26.04 with gcc 15.2, QEMU 10.2.1, xorriso 1.5.6 and
+python3 (current; also the CI container image), and earlier Ubuntu 25.04 with
+gcc 14.2.0, GNU binutils 2.44, GNU Make 4.4.1, QEMU 9.2.1 and GDB 16.2.
+OVMF (`/usr/share/OVMF/OVMF_CODE_4M.fd`) is optional and only used by
+`make run-uefi`. `python3` is needed to build the user programs and by the
+`net-live` test.
 
 ```
 sudo apt install build-essential qemu-system-x86 gdb xorriso curl ovmf
