@@ -332,3 +332,22 @@ void shell_self_test(void)
         panic("shell: did not exit");
     pr_info("test", "shell: script done");
 }
+
+void multi_self_test(void)
+{
+    void *image = NULL;
+    size_t len = 0;
+    if (vfs_slurp("/bin/spin", &image, &len) != 0)
+        panic("multi: /bin/spin missing");
+    struct process *a = NULL, *b = NULL;
+    if (elf_spawn(image, len, &a) <= 0 || elf_spawn(image, len, &b) <= 0)
+        panic("multi: spawn");
+    uint64_t start = timer_ticks();
+    while ((a->alive || b->alive) && timer_ticks() < start + 500)
+        sched_yield();
+    if (a->alive || b->alive)
+        panic("multi: processes did not finish");
+    if (a->exit_status != 0 || b->exit_status != 0)
+        panic("multi: exit status %d %d", a->exit_status, b->exit_status);
+    pr_info("test", "multi: two processes ok");
+}

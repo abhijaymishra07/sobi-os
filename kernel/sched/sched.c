@@ -8,6 +8,7 @@
 #include <sobi/log.h>
 #include <sobi/panic.h>
 #include <sobi/string.h>
+#include <sobi/proc.h>
 
 #define QUANTUM 5
 #define STACK_PAGES 4
@@ -108,7 +109,10 @@ static void schedule_locked(void)
     next->state = TASK_RUNNING;
     next->timeslice = QUANTUM;
     current = next;
-    tss_set_rsp0(next->kstack_top);
+    prev->cr3 = cpu_read_cr3() & ~0xfffULL;
+    proc_save_context(prev);
+    proc_load_context(next);
+    tss_set_rsp0(next->user_sys_top ? next->user_sys_top : next->kstack_top);
     if (next->cr3 != 0)
         vmm_switch(next->cr3);
     switches++;

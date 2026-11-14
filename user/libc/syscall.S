@@ -24,5 +24,15 @@ waitpid:
     mov $4, %rax
     syscall
     ret
+.global getpid
+getpid:
+    mov $1, %rax
+    syscall
+    ret
+.global yield
+yield:
+    mov $9, %rax
+    syscall
+    ret
 
 .section .note.GNU-stack, "", @progbits

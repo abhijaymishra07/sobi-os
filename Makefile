@@ -96,7 +96,7 @@ verify-elf: $(KERNEL)
 USER_CC := gcc
 USER_CFLAGS := -ffreestanding -fno-stack-protector -fno-pic -fno-pie -m64 -mno-red-zone
 USER_CFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -nostdlib
-USER_CMDS := hello echo cat ls sh init
+USER_CMDS := hello echo cat ls sh init spin
 
 .PHONY: user
 
@@ -136,6 +136,7 @@ build/initramfs.tar: $(addprefix build/user/,$(addsuffix .elf,$(USER_CMDS)))
 	cp build/user/ls.elf build/initramfs/bin/ls
 	cp build/user/sh.elf build/initramfs/bin/sh
 	cp build/user/init.elf build/initramfs/bin/init
+	cp build/user/spin.elf build/initramfs/bin/spin
 	tar --format=ustar -cf $@ -C build/initramfs bin
 
 test: user

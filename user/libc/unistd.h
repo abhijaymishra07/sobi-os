@@ -6,5 +6,7 @@ long read(int fd, void *buf, unsigned long n);
 void exit(int status);
 long spawn(const char *path);
 long waitpid(void);
+long getpid(void);
+long yield(void);
 
 #endif

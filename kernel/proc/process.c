@@ -71,6 +71,20 @@ void proc_switch(struct process *proc)
         vmm_switch(proc->cr3);
 }
 
+void proc_save_context(struct task *task)
+{
+    task->user_sys_top = syscall_stack_top;
+    task->user_ret_rsp = user_return_rsp;
+    task->proc = current_proc;
+}
+
+void proc_load_context(struct task *task)
+{
+    syscall_stack_top = task->user_sys_top;
+    user_return_rsp = task->user_ret_rsp;
+    current_proc = task->proc;
+}
+
 void proc_enter(struct process *proc, uint64_t rip, uint64_t user_rsp)
 {
     struct process *prev = current_proc;
@@ -84,6 +98,8 @@ void proc_enter(struct process *proc, uint64_t rip, uint64_t user_rsp)
     syscall_stack_top = saved_stack;
     /* The exit that unwound this process must not also unwind the parent's pending syscall. */
     syscall_stopped = 0;
+    if (saved_stack)
+        tss_set_rsp0(saved_stack);
     vmm_switch(vmm_kernel_cr3());
 }
 

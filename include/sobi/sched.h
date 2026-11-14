@@ -28,6 +28,10 @@ struct task {
     void (*entry)(void *);
     void *arg;
     char name[16];
+    /* User-mode state of the process this task is running, swapped on every switch. */
+    uint64_t user_sys_top;
+    uint64_t user_ret_rsp;
+    void *proc;
 };
 
 void sched_init(void);

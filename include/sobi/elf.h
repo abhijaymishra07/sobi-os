@@ -9,5 +9,6 @@ int elf_spawn(const void *image, size_t len, struct process **out);
 int elf_spawn_path(const char *path, struct process **out);
 void elf_self_test(void);
 void shell_self_test(void);
+void multi_self_test(void);
 
 #endif
