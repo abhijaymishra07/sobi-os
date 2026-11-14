@@ -7,7 +7,7 @@ Each item is exactly one of:
 - **partially implemented**: some of the item works and the gap is named.
 - **planned**: not started; see `roadmap.md`.
 
-Last updated: Milestone 10 (2026-10-17).
+Last updated: Milestone 11 and module integration (2026-11-14).
 
 ## Foundation
 
@@ -57,6 +57,29 @@ Last updated: Milestone 10 (2026-10-17).
 | ustar initramfs, VFS, tmpfs, file descriptors | tested | `vfs` scenario: lookup, EOF, tmpfs, fd limit |
 | ELF64 validation and user program spawn | tested | `elf: hello exit 0`, malformed images rejected |
 
+## Userland, drivers and subsystems (M11 and integration)
+
+| Capability | Status | Evidence |
+|---|---|---|
+| `init` + shell (`echo`, `ls`, `cat`, `exit`, external commands) | tested | `shell` scenario runs a script and requires exit 0 |
+| `spawn` syscall (nested, synchronous) | tested | `syscall` (`-EFAULT`, `-ENOENT`), `shell` |
+| Concurrent user processes (per-task syscall stack, return rsp, rsp0, cr3) | tested | `multi`: two `spin` processes interleave and exit 0 |
+| `stat` and `readdir` syscalls; `ls` lists real directories | tested | `shell` expects `/bin:` entries and `etc/` |
+| Pipes (blocking ring) and shell `a \| b` via `SYS_PIPELINE` | tested | `pipe` unit test; `shell` runs `cat \| upper` |
+| Mutex, semaphore, spinlock | tested | `sync` |
+| Trace ring buffer, hooked into scheduler, syscalls, user page faults | tested | `trace`: live switch, syscall and latency counts move during `multi` |
+| Framebuffer console (Limine framebuffer, 8x16 VGA font) | tested | `console`: glyph pattern and text drawn on the live 1280x800 framebuffer |
+| I/O APIC, PS/2 keyboard IRQ 1 with shift, keyboard feeds stdin | tested | `console`: i8042 `0xD2` injection delivers a real IRQ; manual typing in QEMU |
+| Interactive boot (`/bin/init` launched by non-test builds) | implemented | `make run-gui`; screenshot in `docs/img/shell.png` |
+| PCI bus scan with BAR sizing | tested | `disk`: `pci: 7 devices` |
+| Block layer with write-through sector cache | tested | `disk`: ramdisk round trip and cache hits |
+| virtio-blk (legacy transport, polled) | tested | `disk`: 8192-sector disk attached |
+| sobifs (journalled) on a real disk, survives reboot | tested | `disk`: boot 1 writes `/docs/note`, a separate boot 2 reads it back |
+| sobifs mounted into the VFS for user programs | planned | kernel path API only |
+| Network stack (ARP, IPv4, ICMP, UDP, TCP, DNS parser) with loopback | tested | `net` |
+| virtio-net (legacy) on QEMU user networking | tested | `net-live`: UDP and TCP echo with host servers |
+| Socket syscalls for user programs | planned | kernel API only |
+
 ## Planned (initial delivery)
 
 | Capability | Status | Milestone |
@@ -70,11 +93,12 @@ Last updated: Milestone 10 (2026-10-17).
 | System calls | tested | M8 |
 | Initramfs and read-only VFS | tested | M9 |
 | ELF loader, user runtime, user programs | tested | M10 |
-| init process and shell | planned | M11 |
+| init process and shell | tested | M11 |
 | Test consolidation, docs refresh | planned | M12 |
 
 ## Planned (later roadmap)
 
-Persistent filesystem, pipes and IPC, networking, `fork` with copy-on-write,
-multicore, observability layer, security hardening, performance measurement:
-all **planned**.
+Persistent filesystem, pipes, networking and the trace layer are now
+**partially implemented** (see the table above for what is missing).
+`fork` with copy-on-write, multicore, security hardening and performance
+measurement remain **planned**.

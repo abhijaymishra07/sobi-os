@@ -1,24 +1,23 @@
-# Known limitations (Milestone 10)
+# Known limitations (Milestone 11)
 
 What the kernel does not do yet, and sharp edges in what it does.
 
 ## Not implemented
 
-- The LAPIC timer is the only live interrupt. The PIC stays masked, and there
-  is no I/O APIC. `sched_sleep_ms` blocks the current task. `sleep_poll` is
-  still a halt loop for code that must not sleep.
-- One run queue, one CPU. `spawn` still returns `-ENOENT` from the syscall;
-  the loader entry used by the ELF test is `elf_spawn`. `read` on fd 0
-  returns `-EAGAIN` when no byte is queued. Empty heap slabs are kept.
-- An exception that is not a breakpoint and not an armed fault fixup is fatal.
-  There is no recovery for a double fault beyond the panic on IST1.
-- No tasks, processes, user mode, system calls, filesystem, or shell.
-- The framebuffer is neither requested nor used; output is serial only.
-- Single CPU only; APs are left where the firmware parked them.
-- The heap window is a fixed 64 MiB. There is no demand paging and no
-  per-process address space. `vmm_unmap` drops the mapping and empty page
-  tables; it does not free the data frame. Callers that allocated the frame
-  free it themselves.
+- One CPU and one run queue; APs stay parked. There is no `fork` or `exec`;
+  programs are started with `spawn` or `SYS_PIPELINE`.
+- `spawn` runs the child synchronously inside the parent's syscall; only
+  `SYS_PIPELINE` (and the kernel `elf_spawn` helpers) run processes
+  concurrently. Pipelines are limited to two stages.
+- sobifs works on a virtio-blk disk but is not mounted into the VFS, so user
+  programs cannot see it. Only one disk is used (block device 0).
+- The network stack has no socket syscalls; it is reachable only from kernel
+  code. virtio-blk and virtio-net are polled (no MSI or IRQ), and both use
+  the legacy virtio transport.
+- The keyboard handles set-1 scancodes with shift only (no caps lock, ctrl or
+  extended keys). The framebuffer console has no cursor and no colours.
+- The heap window is a fixed 64 MiB. There is no demand paging or
+  copy-on-write. `vmm_unmap` does not free the data frame.
 
 ## Sharp edges in what exists
 

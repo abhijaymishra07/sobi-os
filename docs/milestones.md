@@ -516,3 +516,44 @@ program (crt0 plus a `write` syscall stub) printed `hello` and exited 0.
 ### Next
 
 M11: init and the shell.
+
+## M11: Shell, concurrency and driver integration (2026-11-14)
+
+### Objective
+
+An interactive shell, concurrent user processes, and the drafted modules
+(pipes, sync, trace, console, keyboard, storage, networking) wired into the
+kernel, each with a QEMU test.
+
+### Observed results
+
+- `shell`: `echo hi`, `ls` (real `/` and `/bin` listings), `cat` of
+  `/etc/motd`, `cat | upper` printing `WELCOME TO SOBI OS.`, then `exit 0`.
+- `multi`: two `spin` processes run concurrently and both exit 0.
+- `trace`: `605 switches, 806 syscalls, 606 latency samples` recorded while
+  `multi` runs.
+- `console`: text drawn on the 1280x800 Limine framebuffer; an i8042 `0xD2`
+  byte arrives as a real IRQ 1 through the I/O APIC (`keyboard irq b`).
+- `disk`: boot 1 formats sobifs on a 4 MiB virtio-blk image and writes
+  `/docs/note`; a second QEMU process reads `'written on boot 1'` back.
+- `net-live`: virtio-net MAC `52:54:00:12:34:56`; UDP and TCP echo with
+  servers on the host through QEMU user networking.
+- Non-test builds launch `/bin/init`, which runs the shell on the screen and
+  the serial port (`make run-gui`).
+
+### Problems found and fixed
+
+- `enter_user` did not preserve callee-saved registers across a nested
+  `spawn`, so the parent resumed with a user `rbp`.
+- A stale `syscall_stopped` flag unwound the parent after a child exited.
+- The syscall stack, user return pointer, current process, `rsp0` and `cr3`
+  were global; they are now saved and restored on every task switch.
+- After a child exited, the kernel switched to the kernel `cr3` instead of
+  the parent's, killing the shell with a page fault.
+- The UDP self-test frame had a wrong IPv4 length.
+- `tcp_connect` dropped in-progress (non-loopback) sockets.
+
+### Remaining limitations
+
+See `limitations.md`. sobifs and sockets are not yet reachable from user
+programs, and disk and network drivers are polled.
