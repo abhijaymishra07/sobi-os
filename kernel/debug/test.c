@@ -95,6 +95,93 @@ static void disk_test(bool first_boot)
     pr_info("disk", "read back after reboot: '%s'", buf);
 }
 
+#define NET_HOST 0x0A000202u
+#define NET_LIVE_UDP_PORT 47001
+#define NET_LIVE_TCP_PORT 47002
+
+static bool net_wait(uint64_t ms, int (*done)(void *), void *arg)
+{
+    uint64_t deadline = uptime_ms() + ms;
+    while (uptime_ms() < deadline) {
+        net_poll();
+        if (done(arg))
+            return true;
+        sched_sleep_ms(10);
+    }
+    return false;
+}
+
+struct udp_probe {
+    int sock;
+    char reply[32];
+    uint64_t next_send;
+};
+
+static int udp_echoed(void *arg)
+{
+    struct udp_probe *u = arg;
+    if (uptime_ms() >= u->next_send) {
+        (void)udp_sendto(u->sock, NET_HOST, NET_LIVE_UDP_PORT, "ping over udp", 13);
+        u->next_send = uptime_ms() + 200;
+    }
+    return udp_recvfrom(u->sock, u->reply, sizeof(u->reply) - 1, NULL, NULL) > 0;
+}
+
+static int tcp_established(void *arg)
+{
+    return tcp_sock_state(*(int *)arg) == TCP_ESTABLISHED;
+}
+
+struct tcp_probe {
+    int sock;
+    char reply[32];
+    int got;
+};
+
+static int tcp_echoed(void *arg)
+{
+    struct tcp_probe *t = arg;
+    int n = tcp_recv(t->sock, t->reply + t->got, sizeof(t->reply) - 1 - (size_t)t->got);
+    if (n > 0)
+        t->got += n;
+    return t->got >= 13;
+}
+
+/* Talks to echo servers on the host through QEMU user networking (10.0.2.2 is the host). */
+static void net_live_test(void)
+{
+    if (virtio_net_init() != 0)
+        panic("net-live: no virtio-net device");
+    uint8_t mac[6];
+    net_get_mac(mac);
+    pr_info("net", "virtio-net up, mac %02x:%02x:%02x:%02x:%02x:%02x",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+    struct udp_probe u = { .sock = udp_bind(40000) };
+    if (u.sock < 0)
+        panic("net-live: udp bind");
+    if (!net_wait(5000, udp_echoed, &u))
+        panic("net-live: no udp reply");
+    if (memcmp(u.reply, "PING OVER UDP", 13) != 0)
+        panic("net-live: udp reply '%s'", u.reply);
+    pr_info("net", "udp echo from host: '%s'", u.reply);
+    udp_close(u.sock);
+
+    struct tcp_probe t = { .sock = tcp_connect(NET_HOST, NET_LIVE_TCP_PORT) };
+    if (t.sock < 0 || !net_wait(5000, tcp_established, &t.sock))
+        panic("net-live: tcp connect (state %d)", t.sock < 0 ? t.sock : tcp_sock_state(t.sock));
+    if (tcp_send(t.sock, "hello via tcp", 13) != 13)
+        panic("net-live: tcp send");
+    if (!net_wait(5000, tcp_echoed, &t))
+        panic("net-live: no tcp reply");
+    if (memcmp(t.reply, "HELLO VIA TCP", 13) != 0)
+        panic("net-live: tcp reply '%s'", t.reply);
+    pr_info("net", "tcp echo from host: '%s'", t.reply);
+    tcp_close(t.sock);
+    net_wait(300, tcp_established, &t.sock);
+    pr_info("net", "live checks passed");
+}
+
 static bool cmdline_has(const char *cmdline, const char *key)
 {
     if (!cmdline)
@@ -645,6 +732,11 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=disk-write") || cmdline_has(cmdline, "test=disk-read")) {
         disk_test(cmdline_has(cmdline, "test=disk-write"));
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=net-live")) {
+        net_live_test();
         test_exit(TEST_EXIT_CODE_PASS);
     }
 

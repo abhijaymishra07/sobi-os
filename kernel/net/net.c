@@ -1280,9 +1280,8 @@ int tcp_connect(uint32_t ip, uint16_t port)
     }
     if (!s->used || s->state == TCP_CLOSED)
         return -ECONNREFUSED;
-    if (s->state == TCP_ESTABLISHED)
-        return fd;
-    return -EAGAIN;
+    /* Off-host handshakes finish later; callers poll tcp_sock_state(). */
+    return fd;
 }
 
 int tcp_send(int sock, const void *data, size_t len)
