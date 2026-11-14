@@ -20,6 +20,12 @@
 #include <sobi/syscall.h>
 #include <sobi/vfs.h>
 #include <sobi/elf.h>
+#include <sobi/sync.h>
+#include <sobi/pipe.h>
+#include <sobi/trace.h>
+#include <sobi/console.h>
+#include <sobi/sobifs.h>
+#include <sobi/net.h>
 #include <limine.h>
 
 extern char exc_ud2_insn[], exc_ud2_resume[];
@@ -580,6 +586,37 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=elf")) {
         elf_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=sync")) {
+        sync_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=pipe")) {
+        pipe_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=trace")) {
+        trace_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=console")) {
+        console_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=sobifs")) {
+        sobifs_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=net")) {
+        net_self_test();
+        tcp_self_test();
         test_exit(TEST_EXIT_CODE_PASS);
     }
 

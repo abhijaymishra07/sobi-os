@@ -1522,7 +1522,7 @@ void net_self_test(void)
     be16(frame + 12, 0x0800);
     ip = frame + 14;
     ip[0] = 0x45;
-    be16(ip + 2, 28);
+    be16(ip + 2, 30);
     ip[8] = 64;
     ip[9] = PROTO_UDP;
     be32(ip + 12, 0x0A000202u);
@@ -1540,7 +1540,7 @@ void net_self_test(void)
     if (csum == 0)
         csum = 0xFFFF;
     be16(ip + 26, csum);
-    net_rx_inject(frame, 42);
+    net_rx_inject(frame, 44);
     n = udp_recvfrom(udp, ubuf, sizeof(ubuf), &sip, &sport);
     udp_close(udp);
     if (n != 2 || ubuf[0] != 'h' || ubuf[1] != 'i' || sip != 0x0A000202u || sport != 9999)
