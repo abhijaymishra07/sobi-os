@@ -48,7 +48,7 @@ LDFLAGS += --warn-common --fatal-warnings -T linker.ld -Map=$(MAP)
 QEMU_BASE := -M q35 -m $(QEMU_MEM) -no-reboot -cdrom $(ISO)
 QEMU_TEST := -device isa-debug-exit,iobase=0xf4,iosize=0x04
 
-.PHONY: all kernel iso run run-uefi gdb test verify-elf limine clean distclean
+.PHONY: all kernel iso run run-gui run-uefi gdb test verify-elf limine clean distclean
 
 all: kernel
 
@@ -83,6 +83,9 @@ $(ISO): $(KERNEL) boot/limine.conf scripts/mkiso.sh $(LIMINE)/limine
 
 run: $(ISO)
 	$(QEMU) $(QEMU_BASE) -display none -serial stdio
+
+run-gui: $(ISO)
+	$(QEMU) $(QEMU_BASE) -serial stdio
 
 run-uefi: $(ISO)
 	$(QEMU) $(QEMU_BASE) -drive if=pflash,format=raw,readonly=on,file=$(OVMF) -display none -serial stdio

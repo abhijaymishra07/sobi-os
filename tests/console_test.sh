@@ -8,7 +8,9 @@ failures=0
 run_qemu_test console "test=console" "${QEMU_EXIT_PASS}" \
     "boot: ok" \
     "console: glyph ok" \
+    "console: framebuffer" \
     "console: key a" \
+    "console: keyboard irq b" \
     "console: all checks passed" \
     || failures=$((failures + 1))
 

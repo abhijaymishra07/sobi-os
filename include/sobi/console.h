@@ -25,6 +25,8 @@ void kbd_push_scancode(uint8_t scancode);
 void fb_attach(uint64_t phys, uint32_t width, uint32_t height, uint32_t pitch, uint32_t bpp);
 void fb_putc(char ch);
 void fb_puts(const char *s);
+void fb_write(const char *s, size_t n);
+bool fb_live(void);
 void fb_scroll(void);
 uint32_t fb_read_pixel(uint32_t x, uint32_t y);
 bool fb_self_test_pattern(void);

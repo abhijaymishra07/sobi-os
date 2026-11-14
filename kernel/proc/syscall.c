@@ -15,6 +15,7 @@
 #include <sobi/string.h>
 #include <sobi/pipe.h>
 #include <sobi/trace.h>
+#include <sobi/console.h>
 
 #define MSR_EFER  0xC0000080
 #define MSR_STAR  0xC0000081
@@ -93,6 +94,7 @@ static int64_t sys_write(uint64_t fd, uint64_t ptr, uint64_t len)
     if (fd == 1 && self && self->out_pipe)
         return pipe_write(self->out_pipe, buf, (size_t)len);
     serial_write(buf, (size_t)len);
+    fb_write(buf, (size_t)len);
     return (int64_t)len;
 }
 
@@ -131,6 +133,9 @@ static int64_t sys_read(uint64_t fd, uint64_t ptr, uint64_t len)
     if (input_r == input_w) {
         if (serial_rx_ready())
             syscall_push_input(serial_getc());
+        int key = kbd_poll();
+        if (key >= 0)
+            syscall_push_input((char)key);
     }
     if (input_r == input_w)
         return -EAGAIN;

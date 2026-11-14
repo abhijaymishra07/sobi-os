@@ -4,6 +4,9 @@
 #include <sobi/string.h>
 #include <sobi/panic.h>
 #include <sobi/log.h>
+#include <sobi/io.h>
+#include <sobi/cpu.h>
+#include <sobi/timer.h>
 
 struct console_fb_boot console_fb_boot;
 
@@ -22,32 +25,14 @@ struct fb_state {
 
 static struct fb_state fb;
 
+extern const uint8_t font8x16[95][16];
+
 static uint8_t glyph_bits(unsigned ch, int row)
 {
-    static const uint8_t glyph_a[16] = {
-        0x00, 0x18, 0x24, 0x42, 0x42, 0x7E, 0x42, 0x42,
-        0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
-    static const uint8_t digits[10][16] = {
-        { 0x3C, 0x42, 0x46, 0x4A, 0x52, 0x62, 0x42, 0x3C },
-        { 0x08, 0x18, 0x28, 0x08, 0x08, 0x08, 0x08, 0x3E },
-        { 0x3C, 0x42, 0x02, 0x04, 0x08, 0x10, 0x20, 0x7E },
-        { 0x3C, 0x42, 0x02, 0x1C, 0x02, 0x02, 0x42, 0x3C },
-        { 0x04, 0x0C, 0x14, 0x24, 0x44, 0x7E, 0x04, 0x04 },
-        { 0x7E, 0x40, 0x40, 0x7C, 0x02, 0x02, 0x42, 0x3C },
-        { 0x1C, 0x20, 0x40, 0x7C, 0x42, 0x42, 0x42, 0x3C },
-        { 0x7E, 0x02, 0x04, 0x08, 0x10, 0x10, 0x10, 0x10 },
-        { 0x3C, 0x42, 0x42, 0x3C, 0x42, 0x42, 0x42, 0x3C },
-        { 0x3C, 0x42, 0x42, 0x42, 0x3E, 0x02, 0x04, 0x38 }
-    };
     if (row < 0 || row > 15)
         return 0;
-    if (ch == 'A')
-        return glyph_a[row];
-    if (ch >= '0' && ch <= '9')
-        return digits[ch - '0'][row];
-    if (ch == ' ')
-        return 0;
+    if (ch >= 0x20 && ch < 0x7F)
+        return font8x16[ch - 0x20][row];
     if (row == 0 || row == 15)
         return 0xFF;
     return 0x81;
@@ -128,6 +113,13 @@ void fb_putc(char ch)
     if (uc == '\n') {
         fb.cx = 0;
         fb.cy++;
+    } else if (uc == '\r') {
+        fb.cx = 0;
+    } else if (uc == '\b') {
+        if (fb.cx > 0) {
+            fb.cx--;
+            draw_glyph(fb.cx * 8, fb.cy * 16, ' ', 0);
+        }
     } else {
         draw_glyph(fb.cx * 8, fb.cy * 16, uc, 0x00FFFFFFu);
         fb.cx++;
@@ -140,6 +132,17 @@ void fb_putc(char ch)
         fb_scroll();
         fb.cy--;
     }
+}
+
+void fb_write(const char *s, size_t n)
+{
+    for (size_t i = 0; i < n; i++)
+        fb_putc(s[i]);
+}
+
+bool fb_live(void)
+{
+    return fb.live != 0;
 }
 
 void fb_puts(const char *s)
@@ -183,22 +186,37 @@ bool fb_self_test_pattern(void)
     fb.cy = 0;
     fb.live = 0;
     fb_puts("A");
-    ok = fb_read_pixel(0, 0) == 0 && fb_read_pixel(3, 1) == 0x00FFFFFFu;
+    ok = fb_read_pixel(0, 0) == 0 && fb_read_pixel(2, 3) == 0x00FFFFFFu && fb_read_pixel(0, 3) == 0;
     fb = saved;
     kfree(buf);
     return ok;
 }
 
+static uint32_t lit_pixels(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h)
+{
+    uint32_t n = 0;
+    for (uint32_t y = y0; y < y0 + h; y++)
+        for (uint32_t x = x0; x < x0 + w; x++)
+            if (fb_read_pixel(x, y))
+                n++;
+    return n;
+}
+
 void console_self_test(void)
 {
     int ch;
-    if (!fb.live && console_fb_boot.present) {
-        fb_attach(console_fb_boot.phys, console_fb_boot.width, console_fb_boot.height,
-                  console_fb_boot.pitch, console_fb_boot.bpp);
-    }
     if (!fb_self_test_pattern())
         panic("console: glyph");
     pr_info("console", "glyph ok");
+
+    if (!fb.live)
+        panic("console: no framebuffer");
+    uint32_t row = fb.cy;
+    fb_puts("\nSOBI");
+    if (lit_pixels(0, (row + 1) * 16, 32, 16) == 0)
+        panic("console: framebuffer text not drawn");
+    pr_info("console", "framebuffer %ux%u live", fb.width, fb.height);
+
     while (kbd_poll() >= 0)
         ;
     kbd_push_scancode(0x1E);
@@ -206,5 +224,22 @@ void console_self_test(void)
     if (ch != 'a')
         panic("console: key");
     pr_info("console", "key a");
+
+    /* i8042 command 0xD2 queues a byte as if typed, raising a real IRQ 1. */
+    while (inb(0x64) & 0x02)
+        ;
+    outb(0x64, 0xD2);
+    while (inb(0x64) & 0x02)
+        ;
+    outb(0x60, 0x30);
+    uint64_t deadline = uptime_ms() + 500;
+    ch = -1;
+    while (ch < 0 && uptime_ms() < deadline) {
+        cpu_hlt();
+        ch = kbd_poll();
+    }
+    if (ch != 'b')
+        panic("console: keyboard irq (got %d)", ch);
+    pr_info("console", "keyboard irq b");
     pr_info("console", "all checks passed");
 }

@@ -30,6 +30,13 @@ volatile struct limine_hhdm_request limine_hhdm_req = {
 };
 
 __used __section(".limine_requests")
+volatile struct limine_framebuffer_request limine_fb_req = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
+    .revision = 0,
+    .response = NULL,
+};
+
+__used __section(".limine_requests")
 volatile struct limine_memmap_request limine_memmap_req = {
     .id = LIMINE_MEMMAP_REQUEST_ID,
     .revision = 0,

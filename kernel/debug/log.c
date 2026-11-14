@@ -1,3 +1,4 @@
+#include <sobi/console.h>
 #include <sobi/log.h>
 #include <sobi/serial.h>
 #include <sobi/string.h>
@@ -239,6 +240,7 @@ int kvprintf(const char *fmt, va_list ap)
     int n = kvsnprintf(buf, sizeof(buf), fmt, ap);
     size_t len = n < (int)sizeof(buf) ? (size_t)n : sizeof(buf) - 1;
     serial_write(buf, len);
+    fb_write(buf, len);
     return n;
 }
 
@@ -274,4 +276,5 @@ void klog(enum log_level level, const char *subsys, const char *fmt, ...)
     kvprintf(fmt, ap);
     va_end(ap);
     serial_putc('\n');
+    fb_putc('\n');
 }

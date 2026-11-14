@@ -97,20 +97,27 @@ int main(void)
     for (;;) {
         char c = 0;
         long r = read(0, &c, 1);
-        if (r < 0)
+        if (r <= 0) {
+            yield();
             continue;
-        if (r == 0)
-            continue;
+        }
         if (c == '\b' || c == 127) {
-            if (n > 0)
+            if (n > 0) {
                 n--;
+                write(1, "\b \b", 3);
+            }
             continue;
         }
+        if (c == '\r')
+            c = '\n';
         if (c != '\n') {
-            if (n < 127)
+            if (n < 127) {
                 line[n++] = c;
+                write(1, &c, 1);
+            }
             continue;
         }
+        write(1, "\n", 1);
         line[n] = 0;
         run_line(line);
         n = 0;
