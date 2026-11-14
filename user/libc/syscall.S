@@ -14,5 +14,15 @@ exit:
     xor %eax, %eax
     syscall
     ud2
+.global spawn
+spawn:
+    mov $3, %rax
+    syscall
+    ret
+.global waitpid
+waitpid:
+    mov $4, %rax
+    syscall
+    ret
 
 .section .note.GNU-stack, "", @progbits

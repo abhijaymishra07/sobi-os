@@ -15,6 +15,7 @@
 extern void enter_user(uint64_t rip, uint64_t user_rsp);
 extern char user_resume[];
 extern uint64_t user_return_rsp;
+extern uint64_t syscall_stack_top;
 
 static struct process *current_proc;
 static uint64_t next_pid = 1;
@@ -71,9 +72,15 @@ void proc_switch(struct process *proc)
 
 void proc_enter(struct process *proc, uint64_t rip, uint64_t user_rsp)
 {
+    struct process *prev = current_proc;
+    uint64_t saved_return = user_return_rsp;
+    uint64_t saved_stack = syscall_stack_top;
     current_proc = proc;
     vmm_switch(proc->cr3);
     enter_user(rip, user_rsp);
+    current_proc = prev;
+    user_return_rsp = saved_return;
+    syscall_stack_top = saved_stack;
     vmm_switch(vmm_kernel_cr3());
 }
 

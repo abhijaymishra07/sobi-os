@@ -18,7 +18,7 @@
 #include <sobi/elf.h>
 #include <sobi/test.h>
 
-#define SOBI_VERSION "0.10.0"
+#define SOBI_VERSION "0.11.0"
 
 void kmain(void) __noreturn;
 

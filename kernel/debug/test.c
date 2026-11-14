@@ -583,6 +583,11 @@ void test_run(const char *cmdline)
         test_exit(TEST_EXIT_CODE_PASS);
     }
 
+    if (cmdline_has(cmdline, "test=shell")) {
+        shell_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
     if (cmdline_has(cmdline, "test=boot") || !cmdline || !*cmdline) {
         pr_info("test", "boot test complete");
         test_exit(TEST_EXIT_CODE_PASS);

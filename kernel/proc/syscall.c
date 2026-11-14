@@ -11,6 +11,7 @@
 #include <sobi/log.h>
 #include <sobi/panic.h>
 #include <sobi/vfs.h>
+#include <sobi/elf.h>
 #include <sobi/string.h>
 
 #define MSR_EFER  0xC0000080
@@ -118,11 +119,17 @@ static int64_t sys_wait(void)
     struct process *self = proc_current();
     if (!self)
         return -ECHILD;
-    for (struct process *c = self->child; c; c = c->sibling) {
-        if (!c->alive)
-            return c->exit_status;
+    for (;;) {
+        bool pending = false;
+        for (struct process *c = self->child; c; c = c->sibling) {
+            if (!c->alive)
+                return c->exit_status;
+            pending = true;
+        }
+        if (!pending)
+            return -ECHILD;
+        sched_yield();
     }
-    return -ECHILD;
 }
 
 int64_t syscall_dispatch(struct sc_args *args)
@@ -139,8 +146,13 @@ int64_t syscall_dispatch(struct sc_args *args)
         return proc_current() ? (int64_t)proc_current()->pid : -EINVAL;
     case SYS_GETPPID:
         return proc_current() ? (int64_t)proc_current()->ppid : -EINVAL;
-    case SYS_SPAWN:
-        return -ENOENT;
+    case SYS_SPAWN: {
+        char path[VFS_PATH_MAX];
+        if (copy_user_path(args->a0, path, sizeof(path)) != 0)
+            return -EFAULT;
+        struct process *child = NULL;
+        return elf_spawn_path(path, &child);
+    }
     case SYS_WAIT:
         return sys_wait();
     case SYS_READ:

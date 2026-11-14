@@ -634,6 +634,42 @@ int vfs_unlink(const char *path)
     return rc;
 }
 
+int vfs_slurp(const char *path, void **data, size_t *len)
+{
+    struct vfs_stat st;
+    int rc = vfs_stat(path, &st);
+    if (rc != 0)
+        return rc;
+    if (st.mode & VFS_S_IFDIR)
+        return -EISDIR;
+    struct vfs_filetable ft;
+    memset(&ft, 0, sizeof(ft));
+    int fd = vfs_open(&ft, path, O_RDONLY);
+    if (fd < 0)
+        return fd;
+    void *buf = kmalloc(st.size ? st.size : 1);
+    if (!buf) {
+        vfs_close(&ft, fd);
+        return -ENOMEM;
+    }
+    size_t got = 0;
+    while (got < st.size) {
+        int n = vfs_read(&ft, fd, (uint8_t *)buf + got, st.size - got);
+        if (n < 0) {
+            vfs_close(&ft, fd);
+            kfree(buf);
+            return n;
+        }
+        if (n == 0)
+            break;
+        got += (size_t)n;
+    }
+    vfs_close(&ft, fd);
+    *data = buf;
+    *len = got;
+    return 0;
+}
+
 int vfs_dup2(struct vfs_filetable *ft, int oldfd, int newfd)
 {
     if (!ft || oldfd < 0 || newfd < 0 || oldfd >= VFS_MAX_FDS || newfd >= VFS_MAX_FDS)

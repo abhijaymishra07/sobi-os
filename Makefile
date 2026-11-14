@@ -96,7 +96,7 @@ verify-elf: $(KERNEL)
 USER_CC := gcc
 USER_CFLAGS := -ffreestanding -fno-stack-protector -fno-pic -fno-pie -m64 -mno-red-zone
 USER_CFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -nostdlib
-USER_CMDS := hello echo cat ls
+USER_CMDS := hello echo cat ls sh init
 
 .PHONY: user
 
@@ -107,6 +107,14 @@ build/user/crt0.o: user/libc/crt0.S
 	$(USER_CC) $(USER_CFLAGS) -c $< -o $@
 
 build/user/usys.o: user/libc/syscall.S
+	@mkdir -p build/user
+	$(USER_CC) $(USER_CFLAGS) -c $< -o $@
+
+build/user/sh.o: user/shell.c user/libc/unistd.h
+	@mkdir -p build/user
+	$(USER_CC) $(USER_CFLAGS) -c $< -o $@
+
+build/user/init.o: user/init.c user/libc/unistd.h
 	@mkdir -p build/user
 	$(USER_CC) $(USER_CFLAGS) -c $< -o $@
 
@@ -126,6 +134,8 @@ build/initramfs.tar: $(addprefix build/user/,$(addsuffix .elf,$(USER_CMDS)))
 	cp build/user/echo.elf build/initramfs/bin/echo
 	cp build/user/cat.elf build/initramfs/bin/cat
 	cp build/user/ls.elf build/initramfs/bin/ls
+	cp build/user/sh.elf build/initramfs/bin/sh
+	cp build/user/init.elf build/initramfs/bin/init
 	tar --format=ustar -cf $@ -C build/initramfs bin
 
 test: user

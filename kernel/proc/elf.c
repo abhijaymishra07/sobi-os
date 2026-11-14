@@ -12,6 +12,7 @@
 #include <sobi/vfs.h>
 #include <sobi/kheap.h>
 #include <sobi/timer.h>
+#include <sobi/syscall.h>
 
 #define ET_EXEC 2
 #define EM_X86_64 62
@@ -53,6 +54,7 @@ struct spawn_job {
     size_t len;
     struct process *proc;
     int error;
+    bool owned;
 };
 
 extern const unsigned char hello_elf[];
@@ -161,7 +163,10 @@ static void spawn_entry(void *arg)
         vmm_switch(vmm_kernel_cr3());
         task_exit(1);
     }
-    proc_enter(proc, eh->entry, USER_STACK_TOP - 16);
+    uint64_t entry = eh->entry;
+    if (job->owned)
+        kfree((void *)job->image);
+    proc_enter(proc, entry, USER_STACK_TOP - 16);
     vmm_switch(vmm_kernel_cr3());
     kfree(job);
     task_exit(0);
@@ -182,8 +187,68 @@ int elf_spawn(const void *image, size_t len, struct process **out)
     job->len = len;
     job->proc = proc;
     job->error = 0;
+    job->owned = false;
     if (!task_create(spawn_entry, job, "elf"))
         return -ENOMEM;
+    if (out)
+        *out = proc;
+    return (int)proc->pid;
+}
+
+static int run_image(struct spawn_job *job)
+{
+    struct process *proc = job->proc;
+    const struct elf64_ehdr *eh = (const struct elf64_ehdr *)job->image;
+    const struct elf64_phdr *ph = (const struct elf64_phdr *)(job->image + eh->phoff);
+    uint64_t entry = eh->entry;
+    vmm_switch(proc->cr3);
+    for (uint16_t i = 0; i < eh->phnum; i++) {
+        if (ph[i].type != PT_LOAD)
+            continue;
+        if (map_segment(proc, job->image, &ph[i]) != 0) {
+            vmm_switch(vmm_kernel_cr3());
+            return -ENOEXEC;
+        }
+    }
+    uint64_t stack = pmm_alloc();
+    if (!stack || !vmm_map(USER_STACK_TOP - PAGE_SIZE, stack, 1, VMM_USER | VMM_WRITE | VMM_NX)) {
+        vmm_switch(vmm_kernel_cr3());
+        return -ENOMEM;
+    }
+    if (job->owned)
+        kfree((void *)job->image);
+    proc_enter(proc, entry, USER_STACK_TOP - 16);
+    vmm_switch(vmm_kernel_cr3());
+    return 0;
+}
+
+int elf_spawn_path(const char *path, struct process **out)
+{
+    void *image = NULL;
+    size_t len = 0;
+    int rc = vfs_slurp(path, &image, &len);
+    if (rc != 0)
+        return rc;
+    rc = elf_validate(image, len);
+    if (rc != 0) {
+        kfree(image);
+        return rc;
+    }
+    struct process *proc = proc_create(proc_current());
+    if (!proc) {
+        kfree(image);
+        return -ENOMEM;
+    }
+    struct spawn_job job = {
+        .image = image,
+        .len = len,
+        .proc = proc,
+        .error = 0,
+        .owned = true,
+    };
+    rc = run_image(&job);
+    if (rc != 0)
+        return rc;
     if (out)
         *out = proc;
     return (int)proc->pid;
@@ -249,4 +314,21 @@ void elf_self_test(void)
         panic("elf: hello status %d", child->exit_status);
     pr_info("test", "elf: hello exit 0");
     pr_info("test", "elf: all checks passed");
+}
+
+void shell_self_test(void)
+{
+    const char *script = "echo hi\nls\nexit\n";
+    for (const char *p = script; *p; p++)
+        syscall_push_input(*p);
+    struct process *sh = NULL;
+    int pid = elf_spawn_path("/bin/sh", &sh);
+    if (pid <= 0 || !sh)
+        panic("shell: spawn failed");
+    uint64_t start = timer_ticks();
+    while (sh->alive && timer_ticks() < start + 300)
+        sched_yield();
+    if (sh->alive)
+        panic("shell: did not exit");
+    pr_info("test", "shell: script done");
 }

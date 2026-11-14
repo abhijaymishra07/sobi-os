@@ -106,6 +106,7 @@ int vfs_stat(const char *path, struct vfs_stat *st);
 int vfs_mkdir(const char *path);
 int vfs_unlink(const char *path);
 int vfs_dup2(struct vfs_filetable *ft, int oldfd, int newfd);
+int vfs_slurp(const char *path, void **data, size_t *len);
 
 struct vfs_vnode *tmpfs_new(void);
 struct vfs_vnode *initramfs_load(const void *data, size_t len);
