@@ -74,13 +74,6 @@ struct virtq {
     volatile uint16_t *notify;
 };
 
-int virtio_bind(struct virtio_dev *v, struct pci_dev *pci);
-int virtio_negotiate(struct virtio_dev *v, uint32_t want0, uint32_t want1);
-void virtio_driver_ok(struct virtio_dev *v);
-uint64_t virtio_cfg_read64(struct virtio_dev *v, uint32_t offset);
-int virtq_setup(struct virtio_dev *v, uint16_t index, struct virtq *q);
-int virtq_xfer(struct virtio_dev *v, struct virtq *q, const struct virtio_seg *segs, uint16_t nsegs);
-
 bool virtio_blk_match(const struct pci_dev *dev);
 int virtio_blk_attach(struct pci_dev *dev);
 

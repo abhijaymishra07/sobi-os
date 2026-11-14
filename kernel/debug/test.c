@@ -26,6 +26,7 @@
 #include <sobi/console.h>
 #include <sobi/sobifs.h>
 #include <sobi/net.h>
+#include <sobi/block.h>
 #include <limine.h>
 
 extern char exc_ud2_insn[], exc_ud2_resume[];
@@ -49,6 +50,49 @@ void test_exit(uint8_t code)
     kprintf("test: exit %u\n", code);
     outb(TEST_EXIT_PORT, code);
     cpu_halt_forever();
+}
+
+static int bdev_read(void *ctx, uint64_t lba, void *buf, uint32_t n)
+{
+    return blk_read((uint32_t)(uintptr_t)ctx, lba, buf, n);
+}
+
+static int bdev_write(void *ctx, uint64_t lba, const void *buf, uint32_t n)
+{
+    return blk_write((uint32_t)(uintptr_t)ctx, lba, buf, n);
+}
+
+/* Two boots share one virtio disk image: the first formats and writes, the second reads back. */
+static void disk_test(bool first_boot)
+{
+    if (block_init() < 1)
+        panic("disk: no virtio-blk device");
+    struct sobifs_dev dev = {
+        .read = bdev_read, .write = bdev_write, .ctx = (void *)0, .nsectors = blk_capacity(0),
+    };
+    sobifs_attach(&dev);
+    char buf[64];
+    if (first_boot) {
+        block_self_test();
+        if (sobifs_format(&dev) != 0 || sobifs_mount(&dev) != 0)
+            panic("disk: format");
+        const char *msg = "written on boot 1";
+        if (sobifs_mkdir("/docs") != 0 || sobifs_create("/docs/note") != 0 ||
+            sobifs_write("/docs/note", 0, msg, (uint32_t)strlen(msg)) != (int)strlen(msg))
+            panic("disk: write");
+        if (sobifs_sync() != 0 || blk_sync(0) != 0)
+            panic("disk: sync");
+        pr_info("disk", "formatted and wrote /docs/note (cache hits %lu misses %lu)", cache_hits, cache_misses);
+        return;
+    }
+    int replay = sobifs_replay(&dev);
+    if (replay < 0 || sobifs_mount(&dev) != 0)
+        panic("disk: mount after reboot (replay %d)", replay);
+    memset(buf, 0, sizeof(buf));
+    int n = sobifs_read("/docs/note", 0, buf, sizeof(buf) - 1);
+    if (n != 17 || memcmp(buf, "written on boot 1", 17) != 0)
+        panic("disk: read back %d '%s'", n, buf);
+    pr_info("disk", "read back after reboot: '%s'", buf);
 }
 
 static bool cmdline_has(const char *cmdline, const char *key)
@@ -596,6 +640,11 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=pipe")) {
         pipe_self_test();
+        test_exit(TEST_EXIT_CODE_PASS);
+    }
+
+    if (cmdline_has(cmdline, "test=disk-write") || cmdline_has(cmdline, "test=disk-read")) {
+        disk_test(cmdline_has(cmdline, "test=disk-write"));
         test_exit(TEST_EXIT_CODE_PASS);
     }
 

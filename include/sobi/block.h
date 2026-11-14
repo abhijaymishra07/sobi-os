@@ -33,6 +33,8 @@ int blk_register(uint64_t capacity, void *ctx, blk_read_fn read, blk_write_fn wr
 int blk_read(uint32_t dev, uint64_t lba, void *buf, uint32_t nsectors);
 int blk_write(uint32_t dev, uint64_t lba, const void *buf, uint32_t nsectors);
 int blk_sync(uint32_t dev);
+uint64_t blk_capacity(uint32_t dev);
+uint32_t blk_count(void);
 int block_init(void);
 void block_self_test(void);
 
