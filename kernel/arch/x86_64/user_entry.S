@@ -8,8 +8,14 @@ user_return_rsp:
 .global user_resume
 .type enter_user, @function
 enter_user:
+    /* Every SysV callee-saved register: user_resume is reached with user values in them. */
+    pushq %rbp
+    pushq %rbx
     pushq %r12
     pushq %r13
+    pushq %r14
+    pushq %r15
+    subq $8, %rsp
     movq %rdi, %r12
     movq %rsi, %r13
     movq %rsp, user_return_rsp(%rip)
@@ -23,8 +29,13 @@ enter_user:
     pushq %r12
     iretq
 user_resume:
+    addq $8, %rsp
+    popq %r15
+    popq %r14
     popq %r13
     popq %r12
+    popq %rbx
+    popq %rbp
     xorl %eax, %eax
     ret
 .size enter_user, . - enter_user

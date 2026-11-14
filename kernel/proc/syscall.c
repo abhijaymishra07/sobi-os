@@ -301,8 +301,13 @@ void syscall_self_test(void)
     int64_t brk = syscall_invoke(SYS_SBRK, 0, 0, 0, 0, 0, 0);
     if (brk < 0)
         panic("syscall: sbrk");
-    if (syscall_invoke(SYS_SPAWN, 0, 0, 0, 0, 0, 0) != -ENOENT)
-        panic("syscall: spawn");
+    if (syscall_invoke(SYS_SPAWN, 0, 0, 0, 0, 0, 0) != -EFAULT)
+        panic("syscall: spawn null path accepted");
+    static const char missing[] = "/no/such/program";
+    memcpy((void *)(boot_info->hhdm_offset + stack), missing, sizeof(missing));
+    if (syscall_invoke(SYS_SPAWN, USER_STACK_TOP - PAGE_SIZE, 0, 0, 0, 0, 0) != -ENOENT)
+        panic("syscall: spawn of missing file");
+    pr_info("test", "syscall: spawn errors");
     pr_info("test", "syscall: all checks passed");
     preempt_enable();
 }

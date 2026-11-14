@@ -16,6 +16,7 @@ extern void enter_user(uint64_t rip, uint64_t user_rsp);
 extern char user_resume[];
 extern uint64_t user_return_rsp;
 extern uint64_t syscall_stack_top;
+extern uint8_t syscall_stopped;
 
 static struct process *current_proc;
 static uint64_t next_pid = 1;
@@ -81,6 +82,8 @@ void proc_enter(struct process *proc, uint64_t rip, uint64_t user_rsp)
     current_proc = prev;
     user_return_rsp = saved_return;
     syscall_stack_top = saved_stack;
+    /* The exit that unwound this process must not also unwind the parent's pending syscall. */
+    syscall_stopped = 0;
     vmm_switch(vmm_kernel_cr3());
 }
 
