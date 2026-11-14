@@ -34,5 +34,25 @@ yield:
     mov $9, %rax
     syscall
     ret
+.global open
+open:
+    mov $11, %rax
+    syscall
+    ret
+.global close
+close:
+    mov $12, %rax
+    syscall
+    ret
+.global stat
+stat:
+    mov $16, %rax
+    syscall
+    ret
+.global readdir
+readdir:
+    mov $17, %rax
+    syscall
+    ret
 
 .section .note.GNU-stack, "", @progbits

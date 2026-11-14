@@ -9,4 +9,15 @@ long waitpid(void);
 long getpid(void);
 long yield(void);
 
+struct dirent {
+    char name[100];
+    unsigned int ino;
+    unsigned int mode;
+};
+#define S_IFDIR 0x4000u
+
+long open(const char *path, int flags);
+long close(int fd);
+long readdir(int fd, struct dirent *ent);
+
 #endif

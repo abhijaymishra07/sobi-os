@@ -93,6 +93,20 @@ static int64_t sys_write(uint64_t fd, uint64_t ptr, uint64_t len)
 
 static int64_t sys_read(uint64_t fd, uint64_t ptr, uint64_t len)
 {
+    if (fd >= 3) {
+        struct vfs_filetable *ft = current_files();
+        if (!ft)
+            return -EBADF;
+        if (len > 4096)
+            return -EINVAL;
+        if (!user_range_ok((void *)ptr, (size_t)len))
+            return -EFAULT;
+        char buf[4096];
+        int n = vfs_read(ft, (int)fd, buf, (size_t)len);
+        if (n > 0 && copy_to_user((void *)ptr, buf, (size_t)n) != 0)
+            return -EFAULT;
+        return n;
+    }
     if (fd != 0)
         return -EBADF;
     if (len == 0)
@@ -204,7 +218,21 @@ int64_t syscall_dispatch(struct sc_args *args)
         char path[VFS_PATH_MAX];
         if (copy_user_path(args->a0, path, sizeof(path)) != 0)
             return -EFAULT;
-        return -EINVAL;
+        struct vfs_stat st;
+        int rc = vfs_stat(path, &st);
+        if (rc != 0)
+            return rc;
+        return copy_to_user((void *)args->a1, &st, sizeof(st)) != 0 ? -EFAULT : 0;
+    }
+    case SYS_READDIR: {
+        struct vfs_filetable *ft = current_files();
+        if (!ft)
+            return -EBADF;
+        struct vfs_dirent ent;
+        int rc = vfs_readdir(ft, (int)args->a0, &ent);
+        if (rc != 0)
+            return rc;
+        return copy_to_user((void *)args->a1, &ent, sizeof(ent)) != 0 ? -EFAULT : 0;
     }
     case SYS_SBRK: {
         struct process *self = proc_current();

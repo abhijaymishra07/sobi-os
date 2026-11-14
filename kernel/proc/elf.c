@@ -1,4 +1,5 @@
 #include <sobi/elf.h>
+#include <sobi/cpu.h>
 #include <sobi/proc.h>
 #include <sobi/vmm.h>
 #include <sobi/pmm.h>
@@ -201,24 +202,25 @@ static int run_image(struct spawn_job *job)
     const struct elf64_ehdr *eh = (const struct elf64_ehdr *)job->image;
     const struct elf64_phdr *ph = (const struct elf64_phdr *)(job->image + eh->phoff);
     uint64_t entry = eh->entry;
+    uint64_t back = cpu_read_cr3() & ~0xfffULL;
     vmm_switch(proc->cr3);
     for (uint16_t i = 0; i < eh->phnum; i++) {
         if (ph[i].type != PT_LOAD)
             continue;
         if (map_segment(proc, job->image, &ph[i]) != 0) {
-            vmm_switch(vmm_kernel_cr3());
+            vmm_switch(back);
             return -ENOEXEC;
         }
     }
     uint64_t stack = pmm_alloc();
     if (!stack || !vmm_map(USER_STACK_TOP - PAGE_SIZE, stack, 1, VMM_USER | VMM_WRITE | VMM_NX)) {
-        vmm_switch(vmm_kernel_cr3());
+        vmm_switch(back);
         return -ENOMEM;
     }
     if (job->owned)
         kfree((void *)job->image);
     proc_enter(proc, entry, USER_STACK_TOP - 16);
-    vmm_switch(vmm_kernel_cr3());
+    vmm_switch(back);
     return 0;
 }
 
@@ -318,7 +320,7 @@ void elf_self_test(void)
 
 void shell_self_test(void)
 {
-    const char *script = "echo hi\nls\nexit\n";
+    const char *script = "echo hi\nls\ncat\nexit\n";
     for (const char *p = script; *p; p++)
         syscall_push_input(*p);
     struct process *sh = NULL;
@@ -330,6 +332,8 @@ void shell_self_test(void)
         sched_yield();
     if (sh->alive)
         panic("shell: did not exit");
+    if (sh->exit_status != 0)
+        panic("shell: exit status %d", sh->exit_status);
     pr_info("test", "shell: script done");
 }
 

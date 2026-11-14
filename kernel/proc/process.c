@@ -100,7 +100,7 @@ void proc_enter(struct process *proc, uint64_t rip, uint64_t user_rsp)
     syscall_stopped = 0;
     if (saved_stack)
         tss_set_rsp0(saved_stack);
-    vmm_switch(vmm_kernel_cr3());
+    vmm_switch(prev && prev->cr3 ? prev->cr3 : vmm_kernel_cr3());
 }
 
 bool proc_user_trap(struct int_frame *frame)
@@ -113,8 +113,10 @@ bool proc_user_trap(struct int_frame *frame)
         return false;
     } else {
         pr_info("proc", "killed pid %lu vec %lu", current_proc ? current_proc->pid : 0, frame->vector);
-        if (current_proc)
+        if (current_proc) {
             current_proc->alive = false;
+            current_proc->exit_status = 128 + (int)frame->vector;
+        }
     }
     frame->rip = (uint64_t)user_resume;
     frame->cs = GDT_KCODE;

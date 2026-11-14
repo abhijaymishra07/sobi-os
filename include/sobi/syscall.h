@@ -20,7 +20,8 @@
 #define SYS_MKDIR  14
 #define SYS_UNLINK 15
 #define SYS_STAT   16
-#define SYS_MAX    17
+#define SYS_READDIR 17
+#define SYS_MAX    18
 
 void syscall_init(void);
 int64_t syscall_invoke(uint64_t num, uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5);

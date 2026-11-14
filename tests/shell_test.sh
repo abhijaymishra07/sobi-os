@@ -8,7 +8,10 @@ failures=0
 run_qemu_test shell "test=shell" "${QEMU_EXIT_PASS}" \
     "boot: ok" \
     "hi" \
-    "ls" \
+    "/bin:" \
+    "  sh" \
+    "  etc/" \
+    "Welcome to SOBI OS." \
     "shell: script done" \
     || failures=$((failures + 1))
 

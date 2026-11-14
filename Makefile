@@ -128,7 +128,7 @@ build/user/%.elf: build/user/%.o build/user/crt0.o build/user/usys.o user/user.l
 kernel/proc/hello_blob.c: build/user/hello.elf scripts/mkblob.py
 	python3 scripts/mkblob.py $< $@ hello_elf
 
-build/initramfs.tar: $(addprefix build/user/,$(addsuffix .elf,$(USER_CMDS)))
+build/initramfs.tar: $(addprefix build/user/,$(addsuffix .elf,$(USER_CMDS))) user/motd
 	@mkdir -p build/initramfs/bin
 	cp build/user/hello.elf build/initramfs/bin/hello
 	cp build/user/echo.elf build/initramfs/bin/echo
@@ -137,7 +137,9 @@ build/initramfs.tar: $(addprefix build/user/,$(addsuffix .elf,$(USER_CMDS)))
 	cp build/user/sh.elf build/initramfs/bin/sh
 	cp build/user/init.elf build/initramfs/bin/init
 	cp build/user/spin.elf build/initramfs/bin/spin
-	tar --format=ustar -cf $@ -C build/initramfs bin
+	mkdir -p build/initramfs/etc
+	cp user/motd build/initramfs/etc/motd
+	tar --format=ustar -cf $@ -C build/initramfs bin etc
 
 test: user
 	$(MAKE) BUILD=test verify-elf
