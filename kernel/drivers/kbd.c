@@ -40,6 +40,12 @@ static const char set1_shift[128] = {
 };
 
 static bool shift;
+static volatile uint64_t irq_count;
+
+uint64_t kbd_irq_count(void)
+{
+    return irq_count;
+}
 static uint8_t ring[KBD_CAP];
 static uint32_t rhead;
 static uint32_t rtail;
@@ -86,11 +92,23 @@ void kbd_push_scancode(uint8_t scancode)
     irq_restore(flags);
 }
 
+static void drain_controller(void)
+{
+    uint8_t st;
+    while ((st = inb(KBD_STAT)) & 0x01) {
+        uint8_t sc = inb(KBD_DATA);
+        if (!(st & 0x20))
+            kbd_push_scancode(sc);
+    }
+}
+
 int kbd_poll(void)
 {
     uint64_t flags = cpu_read_flags();
     int ch;
     cpu_cli();
+    /* A missed edge-triggered IRQ 1 leaves a byte stuck in the controller; pick it up here. */
+    drain_controller();
     ch = ring_pop();
     irq_restore(flags);
     return ch;
@@ -99,8 +117,8 @@ int kbd_poll(void)
 static void kbd_irq(struct int_frame *frame)
 {
     (void)frame;
-    if (inb(KBD_STAT) & 0x01)
-        kbd_push_scancode(inb(KBD_DATA));
+    irq_count++;
+    drain_controller();
     apic_eoi();
 }
 

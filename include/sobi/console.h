@@ -20,6 +20,7 @@ void ioapic_mask(uint32_t irq);
 
 void kbd_init(void);
 int kbd_poll(void);
+uint64_t kbd_irq_count(void);
 void kbd_push_scancode(uint8_t scancode);
 
 void fb_attach(uint64_t phys, uint32_t width, uint32_t height, uint32_t pitch, uint32_t bpp);

@@ -17,7 +17,8 @@ LIMINE   := third_party/limine
 OVMF     ?= /usr/share/OVMF/OVMF_CODE_4M.fd
 QEMU_MEM ?= 256M
 
-C_SRCS := $(shell find kernel -name '*.c' | sort)
+# hello_blob.c is generated from user/commands/hello.c (see `user` below).
+C_SRCS := $(sort $(shell find kernel -name '*.c') kernel/proc/hello_blob.c)
 S_SRCS := $(shell find kernel -name '*.S' | sort)
 OBJS   := $(patsubst %.c,$(OUT)/%.o,$(C_SRCS)) $(patsubst %.S,$(OUT)/%.o,$(S_SRCS))
 DEPS   := $(OBJS:.o=.d)
@@ -48,9 +49,22 @@ LDFLAGS += --warn-common --fatal-warnings -T linker.ld -Map=$(MAP)
 QEMU_BASE := -M q35 -m $(QEMU_MEM) -no-reboot -cdrom $(ISO)
 QEMU_TEST := -device isa-debug-exit,iobase=0xf4,iosize=0x04
 
-.PHONY: all kernel iso run run-gui run-uefi gdb test verify-elf limine clean distclean
+.PHONY: all kernel iso run run-gui run-uefi gdb test verify-elf limine clean distclean help
 
 all: kernel
+
+help:
+	@echo "SOBI OS build targets (BUILD=debug|release|test, default debug)"
+	@echo "  make              build the kernel ELF"
+	@echo "  make iso          build a bootable hybrid BIOS/UEFI ISO"
+	@echo "  make run-gui      boot in a QEMU window with the interactive shell"
+	@echo "  make run          boot headless, serial console on stdio"
+	@echo "  make run-uefi     boot headless under OVMF (UEFI)"
+	@echo "  make gdb          boot paused with GDB attached"
+	@echo "  make test         build the test kernel and run every QEMU test"
+	@echo "  make user         build user programs and the initramfs"
+	@echo "  make clean        remove build/  (distclean also removes Limine)"
+
 
 kernel: $(KERNEL)
 
@@ -78,7 +92,7 @@ $(LIMINE)/limine:
 
 iso: $(ISO)
 
-$(ISO): $(KERNEL) boot/limine.conf scripts/mkiso.sh $(LIMINE)/limine
+$(ISO): $(KERNEL) build/initramfs.tar boot/limine.conf scripts/mkiso.sh $(LIMINE)/limine
 	./scripts/mkiso.sh $(KERNEL) boot/limine.conf $@
 
 run: $(ISO)
@@ -133,14 +147,7 @@ kernel/proc/hello_blob.c: build/user/hello.elf scripts/mkblob.py
 
 build/initramfs.tar: $(addprefix build/user/,$(addsuffix .elf,$(USER_CMDS))) user/motd
 	@mkdir -p build/initramfs/bin
-	cp build/user/hello.elf build/initramfs/bin/hello
-	cp build/user/echo.elf build/initramfs/bin/echo
-	cp build/user/cat.elf build/initramfs/bin/cat
-	cp build/user/ls.elf build/initramfs/bin/ls
-	cp build/user/sh.elf build/initramfs/bin/sh
-	cp build/user/init.elf build/initramfs/bin/init
-	cp build/user/spin.elf build/initramfs/bin/spin
-	cp build/user/upper.elf build/initramfs/bin/upper
+	for c in $(USER_CMDS); do cp build/user/$$c.elf build/initramfs/bin/$$c; done
 	mkdir -p build/initramfs/etc
 	cp user/motd build/initramfs/etc/motd
 	tar --format=ustar -cf $@ -C build/initramfs bin etc
@@ -157,7 +164,7 @@ test: user
 	echo "test: all suites passed"
 
 clean:
-	rm -rf build
+	rm -rf build kernel/proc/hello_blob.c
 
 distclean: clean
 	rm -rf $(LIMINE)

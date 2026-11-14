@@ -21,6 +21,7 @@ struct fb_state {
     uint32_t cx;
     uint32_t cy;
     int live;
+    int esc;
 };
 
 static struct fb_state fb;
@@ -110,6 +111,28 @@ void fb_putc(char ch)
     if (!fb.base || fb.cols == 0 || fb.rows == 0)
         return;
     uc = (unsigned char)ch;
+    /* Minimal ANSI: ESC [ ... J clears the screen, ESC [ ... H homes the cursor. */
+    if (fb.esc) {
+        if (uc == '[' || (uc >= '0' && uc <= '9') || uc == ';')
+            return;
+        fb.esc = 0;
+        if (uc == 'J') {
+            volatile uint64_t *px = (volatile uint64_t *)fb.base;
+            size_t words = (size_t)fb.pitch * fb.height / 8;
+            for (size_t i = 0; i < words; i++)
+                px[i] = 0;
+            fb.cx = 0;
+            fb.cy = 0;
+        } else if (uc == 'H') {
+            fb.cx = 0;
+            fb.cy = 0;
+        }
+        return;
+    }
+    if (uc == 0x1B) {
+        fb.esc = 1;
+        return;
+    }
     if (uc == '\n') {
         fb.cx = 0;
         fb.cy++;
@@ -231,13 +254,14 @@ void console_self_test(void)
     outb(0x64, 0xD2);
     while (inb(0x64) & 0x02)
         ;
+    uint64_t irqs = kbd_irq_count();
     outb(0x60, 0x30);
     uint64_t deadline = uptime_ms() + 500;
-    ch = -1;
-    while (ch < 0 && uptime_ms() < deadline) {
+    while (kbd_irq_count() == irqs && uptime_ms() < deadline)
         cpu_hlt();
-        ch = kbd_poll();
-    }
+    if (kbd_irq_count() == irqs)
+        panic("console: no keyboard irq");
+    ch = kbd_poll();
     if (ch != 'b')
         panic("console: keyboard irq (got %d)", ch);
     pr_info("console", "keyboard irq b");

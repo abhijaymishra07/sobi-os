@@ -63,7 +63,36 @@ static void run_line(char *line)
     if (starts(line, "exit") && (line[4] == 0 || line[4] == ' '))
         exit(0);
     if (starts(line, "help")) {
-        write(1, "echo exit help pwd ls\n", 22);
+        const char *h =
+            "built-ins: help echo pwd uptime clear exit\n"
+            "programs:  ls cat upper hello spin (from /bin)\n"
+            "pipes:     cat | upper\n";
+        write(1, h, (unsigned long)slen(h));
+        return;
+    }
+    if (starts(line, "clear")) {
+        write(1, "\033[2J\033[H", 7);
+        return;
+    }
+    if (starts(line, "uptime")) {
+        char buf[32];
+        int n = 0;
+        unsigned long ms = (unsigned long)uptime();
+        unsigned long s = ms / 1000;
+        char digits[20];
+        int d = 0;
+        do {
+            digits[d++] = (char)('0' + s % 10);
+            s /= 10;
+        } while (s);
+        while (d)
+            buf[n++] = digits[--d];
+        buf[n++] = '.';
+        buf[n++] = (char)('0' + (ms % 1000) / 100);
+        buf[n++] = 's';
+        buf[n++] = '\n';
+        write(1, "up ", 3);
+        write(1, buf, (unsigned long)n);
         return;
     }
     if (starts(line, "pwd")) {

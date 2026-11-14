@@ -59,5 +59,10 @@ pipeline:
     mov $18, %rax
     syscall
     ret
+.global uptime
+uptime:
+    mov $8, %rax
+    syscall
+    ret
 
 .section .note.GNU-stack, "", @progbits

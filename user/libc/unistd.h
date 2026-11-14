@@ -8,6 +8,7 @@ long spawn(const char *path);
 long waitpid(void);
 long getpid(void);
 long yield(void);
+long uptime(void);
 
 struct dirent {
     char name[100];
