@@ -19,11 +19,46 @@ static int starts(const char *s, const char *p)
     return 1;
 }
 
+static void to_path(char *path, const char *word)
+{
+    const char *prefix = "/bin/";
+    int n = 0;
+    while (prefix[n]) {
+        path[n] = prefix[n];
+        n++;
+    }
+    for (int i = 0; word[i] && word[i] != ' ' && i < 40; i++)
+        path[n++] = word[i];
+    path[n] = 0;
+}
+
+static int run_pipeline(char *line)
+{
+    char *bar = line;
+    while (*bar && *bar != '|')
+        bar++;
+    if (!*bar)
+        return 0;
+    *bar = 0;
+    char *right = bar + 1;
+    while (*right == ' ')
+        right++;
+    char a[64];
+    char b[64];
+    to_path(a, line);
+    to_path(b, right);
+    if (pipeline(a, b) < 0)
+        write(1, "not found\n", 10);
+    return 1;
+}
+
 static void run_line(char *line)
 {
     while (*line == ' ')
         line++;
     if (!*line)
+        return;
+    if (run_pipeline(line))
         return;
     if (starts(line, "exit") && (line[4] == 0 || line[4] == ' '))
         exit(0);
@@ -45,17 +80,7 @@ static void run_line(char *line)
         return;
     }
     char path[64];
-    path[0] = '/';
-    path[1] = 'b';
-    path[2] = 'i';
-    path[3] = 'n';
-    path[4] = '/';
-    int i = 0;
-    while (line[i] && line[i] != ' ' && i < 40) {
-        path[5 + i] = line[i];
-        i++;
-    }
-    path[5 + i] = 0;
+    to_path(path, line);
     long pid = spawn(path);
     if (pid < 0) {
         write(1, "not found\n", 10);

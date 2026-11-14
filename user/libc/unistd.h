@@ -19,5 +19,6 @@ struct dirent {
 long open(const char *path, int flags);
 long close(int fd);
 long readdir(int fd, struct dirent *ent);
+long pipeline(const char *a, const char *b);
 
 #endif

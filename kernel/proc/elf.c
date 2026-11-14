@@ -14,6 +14,7 @@
 #include <sobi/kheap.h>
 #include <sobi/timer.h>
 #include <sobi/syscall.h>
+#include <sobi/pipe.h>
 
 #define ET_EXEC 2
 #define EM_X86_64 62
@@ -142,6 +143,22 @@ static int map_segment(struct process *proc, const uint8_t *image, const struct 
     return 0;
 }
 
+static void spawn_finish(struct process *proc, int failure)
+{
+    if (failure) {
+        proc->alive = false;
+        proc->exit_status = failure;
+    }
+    if (proc->out_pipe) {
+        pipe_close(proc->out_pipe, PIPE_END_WRITE);
+        proc->out_pipe = NULL;
+    }
+    if (proc->in_pipe) {
+        pipe_close(proc->in_pipe, PIPE_END_READ);
+        proc->in_pipe = NULL;
+    }
+}
+
 static void spawn_entry(void *arg)
 {
     struct spawn_job *job = arg;
@@ -155,6 +172,7 @@ static void spawn_entry(void *arg)
         if (map_segment(proc, job->image, &ph[i]) != 0) {
             job->error = -ENOEXEC;
             vmm_switch(vmm_kernel_cr3());
+            spawn_finish(proc, 126);
             task_exit(1);
         }
     }
@@ -162,6 +180,7 @@ static void spawn_entry(void *arg)
     if (!stack || !vmm_map(USER_STACK_TOP - PAGE_SIZE, stack, 1, VMM_USER | VMM_WRITE | VMM_NX)) {
         job->error = -ENOMEM;
         vmm_switch(vmm_kernel_cr3());
+        spawn_finish(proc, 126);
         task_exit(1);
     }
     uint64_t entry = eh->entry;
@@ -169,6 +188,7 @@ static void spawn_entry(void *arg)
         kfree((void *)job->image);
     proc_enter(proc, entry, USER_STACK_TOP - 16);
     vmm_switch(vmm_kernel_cr3());
+    spawn_finish(proc, 0);
     kfree(job);
     task_exit(0);
 }
@@ -320,7 +340,7 @@ void elf_self_test(void)
 
 void shell_self_test(void)
 {
-    const char *script = "echo hi\nls\ncat\nexit\n";
+    const char *script = "echo hi\nls\ncat\ncat | upper\nexit\n";
     for (const char *p = script; *p; p++)
         syscall_push_input(*p);
     struct process *sh = NULL;
@@ -354,4 +374,36 @@ void multi_self_test(void)
     if (a->exit_status != 0 || b->exit_status != 0)
         panic("multi: exit status %d %d", a->exit_status, b->exit_status);
     pr_info("test", "multi: two processes ok");
+}
+
+int elf_spawn_path_async(const char *path, struct pipe *in, struct pipe *out, struct process **out_proc)
+{
+    void *image = NULL;
+    size_t len = 0;
+    int rc = vfs_slurp(path, &image, &len);
+    if (rc != 0)
+        return rc;
+    rc = elf_validate(image, len);
+    struct process *proc = rc == 0 ? proc_create(proc_current()) : NULL;
+    struct spawn_job *job = proc ? kmalloc(sizeof(*job)) : NULL;
+    if (!job) {
+        kfree(image);
+        return rc != 0 ? rc : -ENOMEM;
+    }
+    proc->in_pipe = in;
+    proc->out_pipe = out;
+    job->image = image;
+    job->len = len;
+    job->proc = proc;
+    job->error = 0;
+    job->owned = true;
+    if (!task_create(spawn_entry, job, "elf")) {
+        kfree(job);
+        kfree(image);
+        spawn_finish(proc, 126);
+        return -ENOMEM;
+    }
+    if (out_proc)
+        *out_proc = proc;
+    return (int)proc->pid;
 }

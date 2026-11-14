@@ -7,6 +7,8 @@
 #define USER_STACK_TOP 0x00007ffffffff000ULL
 #define USER_LIMIT 0x0000800000000000ULL
 
+struct pipe;
+
 struct process {
     uint64_t pid;
     uint64_t ppid;
@@ -19,6 +21,8 @@ struct process {
     void *fds[16];
     void *files;
     uint64_t brk;
+    struct pipe *in_pipe;   /* fd 0 reads from this pipe when set */
+    struct pipe *out_pipe;  /* fd 1 writes to this pipe when set */
 };
 
 void proc_init(void);

@@ -12,6 +12,7 @@ run_qemu_test shell "test=shell" "${QEMU_EXIT_PASS}" \
     "  sh" \
     "  etc/" \
     "Welcome to SOBI OS." \
+    "WELCOME TO SOBI OS." \
     "shell: script done" \
     || failures=$((failures + 1))
 

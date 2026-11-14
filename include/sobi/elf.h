@@ -10,5 +10,7 @@ int elf_spawn_path(const char *path, struct process **out);
 void elf_self_test(void);
 void shell_self_test(void);
 void multi_self_test(void);
+struct pipe;
+int elf_spawn_path_async(const char *path, struct pipe *in, struct pipe *out, struct process **out_proc);
 
 #endif

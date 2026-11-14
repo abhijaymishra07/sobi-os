@@ -13,6 +13,7 @@
 #include <sobi/vfs.h>
 #include <sobi/elf.h>
 #include <sobi/string.h>
+#include <sobi/pipe.h>
 
 #define MSR_EFER  0xC0000080
 #define MSR_STAR  0xC0000081
@@ -87,6 +88,9 @@ static int64_t sys_write(uint64_t fd, uint64_t ptr, uint64_t len)
     char buf[4096];
     if (len && copy_from_user(buf, (void *)ptr, (size_t)len) != 0)
         return -EFAULT;
+    struct process *self = proc_current();
+    if (fd == 1 && self && self->out_pipe)
+        return pipe_write(self->out_pipe, buf, (size_t)len);
     serial_write(buf, (size_t)len);
     return (int64_t)len;
 }
@@ -115,6 +119,14 @@ static int64_t sys_read(uint64_t fd, uint64_t ptr, uint64_t len)
         return -EINVAL;
     if (!user_range_ok((void *)ptr, 1))
         return -EFAULT;
+    struct process *self = proc_current();
+    if (self && self->in_pipe) {
+        char buf[4096];
+        int n = pipe_read(self->in_pipe, buf, (size_t)len);
+        if (n > 0 && copy_to_user((void *)ptr, buf, (size_t)n) != 0)
+            return -EFAULT;
+        return n;
+    }
     if (input_r == input_w) {
         if (serial_rx_ready())
             syscall_push_input(serial_getc());
@@ -126,6 +138,32 @@ static int64_t sys_read(uint64_t fd, uint64_t ptr, uint64_t len)
     if (copy_to_user((void *)ptr, &ch, 1) != 0)
         return -EFAULT;
     return 1;
+}
+
+/* Runs "a | b" as two concurrent processes; returns b's exit status. */
+static int64_t sys_pipeline(uint64_t upath_a, uint64_t upath_b)
+{
+    char a[VFS_PATH_MAX];
+    char b[VFS_PATH_MAX];
+    if (copy_user_path(upath_a, a, sizeof(a)) != 0 || copy_user_path(upath_b, b, sizeof(b)) != 0)
+        return -EFAULT;
+    struct pipe *p = pipe_alloc();
+    if (!p)
+        return -ENOMEM;
+    struct process *pa = NULL;
+    struct process *pb = NULL;
+    int rc = elf_spawn_path_async(a, NULL, p, &pa);
+    if (rc < 0) {
+        pipe_close(p, PIPE_END_WRITE);
+        pipe_close(p, PIPE_END_READ);
+        return rc;
+    }
+    rc = elf_spawn_path_async(b, p, NULL, &pb);
+    if (rc < 0)
+        pipe_close(p, PIPE_END_READ);
+    while (pa->alive || (pb && pb->alive))
+        sched_yield();
+    return rc < 0 ? rc : pb->exit_status;
 }
 
 static int64_t sys_wait(void)
@@ -169,6 +207,8 @@ int64_t syscall_dispatch(struct sc_args *args)
     }
     case SYS_WAIT:
         return sys_wait();
+    case SYS_PIPELINE:
+        return sys_pipeline(args->a0, args->a1);
     case SYS_READ:
         return sys_read(args->a0, args->a1, args->a2);
     case SYS_WRITE:

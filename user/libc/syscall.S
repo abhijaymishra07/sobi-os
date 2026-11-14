@@ -54,5 +54,10 @@ readdir:
     mov $17, %rax
     syscall
     ret
+.global pipeline
+pipeline:
+    mov $18, %rax
+    syscall
+    ret
 
 .section .note.GNU-stack, "", @progbits
