@@ -32,6 +32,7 @@ struct task {
     uint64_t user_sys_top;
     uint64_t user_ret_rsp;
     void *proc;
+    uint64_t ready_at;
 };
 
 void sched_init(void);

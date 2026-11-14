@@ -9,6 +9,7 @@
 #include <sobi/panic.h>
 #include <sobi/string.h>
 #include <sobi/proc.h>
+#include <sobi/trace.h>
 
 #define QUANTUM 5
 #define STACK_PAGES 4
@@ -31,6 +32,7 @@ static bool online;
 static void enqueue(struct task *task)
 {
     task->rq_next = NULL;
+    task->ready_at = uptime_ms();
     if (!ready_tail) {
         ready_head = ready_tail = task;
         return;
@@ -116,6 +118,9 @@ static void schedule_locked(void)
     if (next->cr3 != 0)
         vmm_switch(next->cr3);
     switches++;
+    trace_event(TRACE_SCHED, prev->id, next->id);
+    if (next != idle_task)
+        trace_sched_latency(uptime_ms() - next->ready_at);
     context_switch(&prev->saved_rsp, next->saved_rsp);
     reap();
 }

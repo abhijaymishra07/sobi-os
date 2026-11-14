@@ -601,6 +601,18 @@ void test_run(const char *cmdline)
 
     if (cmdline_has(cmdline, "test=trace")) {
         trace_self_test();
+        uint64_t sched0 = trace_counter(TRACE_SCHED);
+        uint64_t sys0 = trace_counter(TRACE_SYSCALL);
+        multi_self_test();
+        uint64_t dsched = trace_counter(TRACE_SCHED) - sched0;
+        uint64_t dsys = trace_counter(TRACE_SYSCALL) - sys0;
+        uint64_t lat = 0;
+        for (unsigned i = 0; i < TRACE_HIST; i++)
+            lat += trace_hist_bucket(i);
+        pr_info("trace", "live: %lu switches, %lu syscalls, %lu latency samples", dsched, dsys, lat);
+        if (dsched < 2 || dsys < 2 || lat < 2)
+            panic("trace: hooks not firing");
+        pr_info("trace", "hooks ok");
         test_exit(TEST_EXIT_CODE_PASS);
     }
 

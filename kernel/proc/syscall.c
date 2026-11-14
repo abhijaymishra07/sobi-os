@@ -14,6 +14,7 @@
 #include <sobi/elf.h>
 #include <sobi/string.h>
 #include <sobi/pipe.h>
+#include <sobi/trace.h>
 
 #define MSR_EFER  0xC0000080
 #define MSR_STAR  0xC0000081
@@ -186,6 +187,7 @@ static int64_t sys_wait(void)
 
 int64_t syscall_dispatch(struct sc_args *args)
 {
+    trace_event(TRACE_SYSCALL, args->num, proc_current() ? proc_current()->pid : 0);
     switch (args->num) {
     case SYS_EXIT:
         if (proc_current()) {

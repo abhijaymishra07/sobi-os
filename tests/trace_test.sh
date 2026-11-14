@@ -9,6 +9,8 @@ run_qemu_test trace "test=trace" "${QEMU_EXIT_PASS}" \
     "boot: ok" \
     "trace: wrap ok" \
     "trace: all checks passed" \
+    "multi: two processes ok" \
+    "trace: hooks ok" \
     || failures=$((failures + 1))
 
 if [[ ${failures} -eq 0 ]]; then

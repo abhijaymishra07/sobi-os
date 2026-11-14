@@ -1,3 +1,4 @@
+#include <sobi/trace.h>
 #include <sobi/proc.h>
 #include <sobi/uaccess.h>
 #include <sobi/vmm.h>
@@ -112,6 +113,8 @@ bool proc_user_trap(struct int_frame *frame)
     } else if (frame->vector >= 32) {
         return false;
     } else {
+        if (frame->vector == 14)
+            trace_event(TRACE_PAGEFAULT, current_proc ? current_proc->pid : 0, cpu_read_cr2());
         pr_info("proc", "killed pid %lu vec %lu", current_proc ? current_proc->pid : 0, frame->vector);
         if (current_proc) {
             current_proc->alive = false;
